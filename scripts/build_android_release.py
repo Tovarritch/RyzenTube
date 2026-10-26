@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Repack the Android TV shell so it loads this repository's userscript.
+
+The upstream Cobalt APK stores libchrobalt.so uncompressed and embeds the
+userscript URL as a fixed-size string. This script replaces that string while
+preserving each ZIP entry's compression method. Run zipalign and apksigner on
+the resulting APK before distributing it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import zipfile
+from pathlib import Path
+
+
+UPSTREAM_URL = b"https://cdn.jsdelivr.net/npm/@foxreis/tizentube/dist/userScript.js?v="
+RYZENTUBE_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/RyzenTube@main/dist/userScript.js?v="
+
+
+def is_signature_file(name: str) -> bool:
+    upper = name.upper()
+    if not upper.startswith("META-INF/"):
+        return False
+    return upper == "META-INF/MANIFEST.MF" or upper.endswith((".RSA", ".DSA", ".EC", ".SF"))
+
+
+def copy_info(source: zipfile.ZipInfo) -> zipfile.ZipInfo:
+    target = zipfile.ZipInfo(source.filename, source.date_time)
+    target.compress_type = source.compress_type
+    target.comment = source.comment
+    target.extra = source.extra
+    target.create_system = source.create_system
+    target.create_version = source.create_version
+    target.extract_version = source.extract_version
+    target.flag_bits = source.flag_bits
+    target.volume = source.volume
+    target.internal_attr = source.internal_attr
+    target.external_attr = source.external_attr
+    return target
+
+
+def patch_apk(source_path: Path, output_path: Path) -> None:
+    if len(UPSTREAM_URL) != len(RYZENTUBE_URL):
+        raise RuntimeError("Replacement URL must be the same byte length as the upstream URL")
+
+    patched_libraries = 0
+    with zipfile.ZipFile(source_path, "r") as source, zipfile.ZipFile(
+        output_path, "w", allowZip64=True
+    ) as output:
+        output.comment = source.comment
+        for source_info in source.infolist():
+            if is_signature_file(source_info.filename):
+                continue
+
+            data = source.read(source_info)
+            if source_info.filename.endswith("/libchrobalt.so"):
+                if source_info.compress_type != zipfile.ZIP_STORED:
+                    raise RuntimeError(f"{source_info.filename} must remain uncompressed")
+                occurrences = data.count(UPSTREAM_URL)
+                if occurrences != 1:
+                    raise RuntimeError(
+                        f"Expected one userscript URL in {source_info.filename}, found {occurrences}"
+                    )
+                data = data.replace(UPSTREAM_URL, RYZENTUBE_URL)
+                patched_libraries += 1
+
+            output.writestr(copy_info(source_info), data)
+
+    if patched_libraries != 1:
+        output_path.unlink(missing_ok=True)
+        raise RuntimeError(f"Expected one libchrobalt.so, patched {patched_libraries}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("source", type=Path)
+    parser.add_argument("output", type=Path)
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = args.output.with_suffix(args.output.suffix + ".tmp")
+    temporary.unlink(missing_ok=True)
+    patch_apk(args.source, temporary)
+    shutil.move(temporary, args.output)
+
+
+if __name__ == "__main__":
+    main()
