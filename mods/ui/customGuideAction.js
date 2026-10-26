@@ -2,25 +2,6 @@ import { configChangeEmitter, configRead, configWrite } from "../config.js";
 import getCommandExecutor from "./customCommandExecution.js";
 import { GuideEntryRenderer } from "./ytUI.js";
 
-function addRefreshBeforeHome(section) {
-    if (!Array.isArray(section?.items)) return;
-    if (section.items.some(item => item.guideEntryRenderer?.navigationEndpoint?.customAction?.action === 'REFRESH_HOME')) return;
-
-    const homeIndex = section.items.findIndex(item => {
-        const entry = item.guideEntryRenderer;
-        const browseId = entry?.navigationEndpoint?.browseEndpoint?.browseId;
-        const title = entry?.formattedTitle?.simpleText || entry?.formattedTitle?.runs?.[0]?.text;
-        return browseId === 'FEwhat_to_watch' || /^home$/i.test(title || '');
-    });
-    if (homeIndex === -1) return;
-
-    section.items.splice(homeIndex, 0, GuideEntryRenderer(
-        'Refresh',
-        { customAction: { action: 'REFRESH_HOME' } },
-        'REFRESH'
-    ));
-}
-
 const origParse = JSON.parse;
 JSON.parse = function () {
     const r = origParse.apply(this, arguments);
@@ -123,10 +104,6 @@ JSON.parse = function () {
                 }
             }
         }
-    }
-
-    if (Array.isArray(r.items)) {
-        for (const item of r.items) addRefreshBeforeHome(item.guideSectionRenderer);
     }
 
     return r;

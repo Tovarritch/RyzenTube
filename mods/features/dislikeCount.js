@@ -1,5 +1,5 @@
 const API_URL = 'https://returnyoutubedislikeapi.com/votes?videoId=';
-const COUNT_ID = 'tt-dislike-count';
+const BADGE_ID = 'tt-dislike-count';
 
 let activeVideoId = null;
 let activeDislikes = null;
@@ -23,69 +23,41 @@ function formatCount(value) {
   return String(value);
 }
 
-function buttonLabel(element) {
-  return `${element.getAttribute?.('aria-label') || ''} ${element.getAttribute?.('title') || ''}`.toLowerCase();
-}
-
-function findActionButton(pattern) {
-  const buttonSelector = 'button, [role="button"], ytlr-button, ytlr-button-renderer, ytlr-toggle-button-renderer';
-  for (const element of document.querySelectorAll(buttonSelector)) {
-    if (pattern.test(buttonLabel(element))) return element;
-  }
-
-  for (const icon of document.querySelectorAll('[icon], [icon-type], yt-icon, .yt-icon')) {
-    const hint = `${icon.getAttribute?.('icon') || ''} ${icon.getAttribute?.('icon-type') || ''} ${icon.id || ''} ${icon.className || ''}`;
-    if (pattern.test(hint)) {
-      return icon.closest(buttonSelector);
-    }
-  }
-  return null;
-}
-
-function findDislikeButton() {
-  const direct = findActionButton(/\b(dislike|thumb(?:s)?[_ -]?down)\b/i);
-  if (direct) return direct;
-
-  // Some TV builds expose a label only for Like. Dislike is the adjacent
-  // toggle in the same segmented action control.
-  const like = findActionButton(/\b(like|thumb(?:s)?[_ -]?up)\b/i);
-  if (!like) return null;
-  const actions = Array.from(like.parentElement?.querySelectorAll?.(
-    'button, [role="button"], ytlr-button, ytlr-button-renderer, ytlr-toggle-button-renderer'
-  ) || []);
-  const likeIndex = actions.indexOf(like);
-  return actions[likeIndex + 1] || null;
-}
-
-function likeCountTemplate(dislikeButton) {
-  const like = findActionButton(/\b(like|thumb(?:s)?[_ -]?up)\b/i);
-  if (!like || like === dislikeButton) return null;
-  return Array.from(like.querySelectorAll('*')).find(element =>
-    element.children.length === 0 && /^\s*[\d.,]+\s*[KMB]?\s*$/i.test(element.textContent || '')
-  ) || null;
+function metadataHost() {
+  return document.querySelector('div[idomkey="Metadata-Section"]')
+    || document.querySelector('ytlr-video-metadata-renderer')
+    || document.querySelector('ytlr-watch-metadata')
+    || document.querySelector('ytlr-watch-default');
 }
 
 function render() {
   if (activeDislikes === null) return;
-  const button = findDislikeButton();
-  if (!button) return;
+  const host = metadataHost();
+  if (!host) return;
 
-  let count = button.querySelector(`#${COUNT_ID}`);
-  if (!count) {
-    const template = likeCountTemplate(button);
-    count = template ? template.cloneNode(false) : document.createElement('span');
-    count.id = COUNT_ID;
-    count.removeAttribute?.('aria-label');
-    if (!template) {
-      count.style.cssText = 'display:inline-block;margin-left:.35em;font:inherit;color:inherit';
-    }
-    button.appendChild(count);
+  let badge = document.getElementById(BADGE_ID);
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = BADGE_ID;
+    badge.setAttribute('aria-label', 'Dislike count');
+    badge.style.cssText = [
+      'display:inline-flex',
+      'align-items:center',
+      'width:max-content',
+      'margin:0.5em 0',
+      'padding:0.35em 0.7em',
+      'border-radius:0.35em',
+      'background:rgba(0,0,0,0.65)',
+      'color:#fff',
+      'font-size:1.15em',
+      'font-weight:500',
+      'line-height:1.2',
+      'z-index:2'
+    ].join(';');
   }
-  const text = formatCount(activeDislikes);
-  if (count.textContent !== text) count.textContent = text;
-  if (!/dislike/i.test(button.getAttribute('aria-label') || '')) {
-    button.setAttribute('aria-label', `Dislike, ${text}`);
-  }
+  const text = `👎 ${formatCount(activeDislikes)} dislikes`;
+  if (badge.textContent !== text) badge.textContent = text;
+  if (badge.parentElement !== host) host.appendChild(badge);
 }
 
 async function update() {
@@ -98,7 +70,7 @@ async function update() {
 
   activeVideoId = videoId;
   activeDislikes = null;
-  document.getElementById(COUNT_ID)?.remove();
+  document.getElementById(BADGE_ID)?.remove();
   const generation = ++requestGeneration;
 
   try {

@@ -263,9 +263,6 @@ function customAction(action, parameters) {
         case 'CHECK_FOR_UPDATES':
             checkForUpdates(true);
             break;
-        case 'REFRESH_HOME':
-            resolveCommand({ signalAction: { signal: 'RELOAD_PAGE' } });
-            break;
         case 'GO_TO_CHANNEL':
             requestNextAndNavigateChannel(parameters);
             break;

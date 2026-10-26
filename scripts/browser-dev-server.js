@@ -136,7 +136,7 @@ function serveLocal(request, response) {
         return true;
     }
 
-    if (request.url.startsWith("/__tizentube/userScript.js")) {
+    if (request.url === "/__tizentube/userScript.js") {
         if (!fs.existsSync(userscriptPath)) {
             response.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
             response.end("dist/userScript.js is missing. Run npm run build first.");

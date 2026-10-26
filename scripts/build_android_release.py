@@ -41,8 +41,8 @@ def copy_info(source: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return target
 
 
-def patch_apk(source_path: Path, output_path: Path, userscript_url: bytes = RYZENTUBE_URL) -> None:
-    if len(UPSTREAM_URL) != len(userscript_url):
+def patch_apk(source_path: Path, output_path: Path) -> None:
+    if len(UPSTREAM_URL) != len(RYZENTUBE_URL):
         raise RuntimeError("Replacement URL must be the same byte length as the upstream URL")
 
     patched_libraries = 0
@@ -63,7 +63,7 @@ def patch_apk(source_path: Path, output_path: Path, userscript_url: bytes = RYZE
                     raise RuntimeError(
                         f"Expected one userscript URL in {source_info.filename}, found {occurrences}"
                     )
-                data = data.replace(UPSTREAM_URL, userscript_url)
+                data = data.replace(UPSTREAM_URL, RYZENTUBE_URL)
                 patched_libraries += 1
 
             output.writestr(copy_info(source_info), data)
@@ -77,7 +77,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--userscript-url", help="fixed-size URL embedded in libchrobalt.so")
     return parser.parse_args()
 
 
@@ -86,8 +85,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.unlink(missing_ok=True)
-    userscript_url = args.userscript_url.encode("ascii") if args.userscript_url else RYZENTUBE_URL
-    patch_apk(args.source, temporary, userscript_url)
+    patch_apk(args.source, temporary)
     shutil.move(temporary, args.output)
 
 
