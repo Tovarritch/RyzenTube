@@ -4,3 +4,5 @@ node_modules/
 dist/
 .sign
 package-lock.json
+__pycache__/
+*.pyc

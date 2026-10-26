@@ -8,7 +8,7 @@ function redirectUrl(originalUrl) {
 
         if (hostname === 'youtube.com' || hostname === 'www.youtube.com') {
             url.protocol = 'http:';
-            url.host = 'localhost:8099';
+            url.host = window.location.host;
             return url.toString();
         }
 
@@ -16,7 +16,7 @@ function redirectUrl(originalUrl) {
             || hostname.endsWith('gstatic.com') || hostname.endsWith('.google.com')
             || hostname.endsWith('.googleapis.com') || hostname.endsWith('googleusercontent.com')
             || hostname.endsWith('.ggpht.com')) {
-            return 'http://localhost:8099/cors-bypass/' + url.toString();
+            return window.location.origin + '/cors-bypass/' + url.toString();
         }
     } catch (e) {
         console.error('Failed to parse URL during interception:', e);
@@ -64,6 +64,7 @@ export default function () {
                 }
 
                 input = new Request(targetUrl, input);
+                return originalFetch.call(this, input, init);
             }
 
             return originalFetch.apply(this, [targetUrl, init]);

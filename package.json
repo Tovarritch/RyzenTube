@@ -8,6 +8,12 @@
   "main": "dist/userScript.js",
   "author": "Reis Can",
   "serviceFile": "dist/service.js",
+  "scripts": {
+    "build": "npm --prefix mods run build",
+    "test": "npm --prefix mods test && node --test scripts/*.test.js",
+    "dev:browser": "node scripts/browser-dev-server.js --open",
+    "dev:browser:no-open": "node scripts/browser-dev-server.js"
+  },
   "keys": [
     "MediaPlayPause",
     "MediaPlay",

@@ -24,6 +24,21 @@
 
 Follow the guide in the [Installation Guide](./docs/README.md).
 
+## 🧪 Test in a desktop browser
+
+The browser test server proxies the YouTube TV site through localhost and injects
+the locally built TizenTube userscript. It does not require a Tizen device.
+
+```sh
+npm install --prefix mods
+npm run build
+npm run dev:browser
+```
+
+The last command opens `http://localhost:8099/tv` in the default browser. Use
+`npm run dev:browser:no-open` when you only want to start the server. You can
+override the port with the `TIZENTUBE_DEV_PORT` environment variable.
+
 ## ✨ Features
 - 📺 **Picture-in-Picture Mode**
 - 🛑 **Ad Blocker**: Enjoy your favourite streaming website without interruptions from ads.

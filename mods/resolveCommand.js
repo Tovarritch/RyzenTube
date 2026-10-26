@@ -9,6 +9,7 @@ import { requestNextAndNavigateChannel, getFeedbackPanelTokens, sendFeedbackToke
 import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
+import { hideSelectedFeedItem, hideChannelFeedItems } from './utils/feedDom.js';
 
 export default function resolveCommand(cmd, _) {
     // resolveCommand function is pretty OP, it can do from opening modals, changing client settings and way more.
@@ -79,14 +80,18 @@ export function patchResolveCommand() {
                 } else if (cmd?.playlistEditEndpoint?.customAction) {
                     customAction(cmd.playlistEditEndpoint.customAction.action, cmd.playlistEditEndpoint.customAction.parameters);
                     return true;
-                } else if (isHomeBrowseEndpoint(cmd?.browseEndpoint) && isHomePage()) {
+                } else if (isHomeNavigationCommand(cmd)) {
                     // YouTube treats selecting an already-selected Home entry as a no-op.
-                    // Turn it into a soft reload so the recommendations are fetched again.
-                    return ogResolve.call(this, {
+                    // Navigate first when necessary, then force a real page reload so the
+                    // recommendation request cannot be satisfied from the current view.
+                    const alreadyHome = isHomePage();
+                    const result = alreadyHome ? true : ogResolve.call(this, cmd, _);
+                    setTimeout(() => ogResolve.call(this, {
                         signalAction: {
-                            signal: 'SOFT_RELOAD_PAGE'
+                            signal: 'RELOAD_PAGE'
                         }
-                    }, _);
+                    }, _), alreadyHome ? 0 : 500);
+                    return result;
                 } else if (cmd?.openPopupAction?.uniqueId === 'playback-settings') {
                     // Patch the playback settings popup to use TizenTube speed settings
                     const items = cmd.openPopupAction.popup.overlaySectionRenderer.overlay.overlayTwoPanelRenderer.actionPanel.overlayPanelRenderer.content.overlayPanelItemListRenderer.items;
@@ -263,21 +268,24 @@ function customAction(action, parameters) {
             break;
         case 'NOT_INTERESTED':
             hideVideoLocally(parameters.videoId);
-            if (parameters.panel) markFeedback(parameters.panel, 0, true);
+            hideSelectedFeedItem(parameters.videoId);
+            if (parameters.panel) markFeedback(parameters.panel, 0, false);
             showToast('TizenTube', t('toasts.videoHidden'));
-            refreshCurrentFeed();
+            dismissVideoMenu();
             break;
         case 'DONT_RECOMMEND_CHANNEL':
             // Keep a local block as well as YouTube's account-level feedback so
-            // every visible tile from the channel disappears on this refresh.
+            // visible tiles disappear immediately and future responses stay filtered.
             if (parameters.channel) blockChannel(parameters.channel);
+            hideSelectedFeedItem();
+            hideChannelFeedItems(parameters.channel);
             if (parameters.panel) {
                 markFeedback(parameters.panel, 1, false);
                 showToast('TizenTube', t('toasts.channelNotRecommended'));
             } else if (parameters.channel) {
                 showToast('TizenTube', t('toasts.channelBlocked', { name: parameters.channel.name || parameters.channel.id }));
             }
-            refreshCurrentFeed();
+            dismissVideoMenu();
             break;
         case 'CLEAR_HIDDEN_VIDEOS':
             configWrite('hiddenVideos', []);
@@ -285,8 +293,10 @@ function customAction(action, parameters) {
             break;
         case 'BLOCK_CHANNEL':
             blockChannel(parameters);
+            hideSelectedFeedItem();
+            hideChannelFeedItems(parameters);
             showToast('TizenTube', t('toasts.channelBlocked', { name: parameters.name || parameters.id }));
-            refreshCurrentFeed();
+            dismissVideoMenu();
             break;
         case 'FEEDBACK_REASON':
             sendFeedbackToken(parameters.token)
@@ -358,8 +368,12 @@ function customAction(action, parameters) {
 
 const HOME_BROWSE_IDS = new Set(['FEwhat_to_watch', 'FEhome']);
 
-function isHomeBrowseEndpoint(endpoint) {
-    return HOME_BROWSE_IDS.has(endpoint?.browseId);
+function isHomeNavigationCommand(command) {
+    const endpoint = command?.browseEndpoint;
+    const url = command?.commandMetadata?.webCommandMetadata?.url;
+    return HOME_BROWSE_IDS.has(endpoint?.browseId)
+        || endpoint?.canonicalBaseUrl === '/'
+        || url === '/';
 }
 
 function isHomePage() {
@@ -368,19 +382,12 @@ function isHomePage() {
         || [...HOME_BROWSE_IDS].some((browseId) => hash.includes(browseId));
 }
 
-function refreshCurrentFeed() {
-    // Close the long-press menu first. The short delay lets the close command
-    // finish before the route is reloaded and its freshly filtered data renders.
+function dismissVideoMenu() {
     resolveCommand({
         signalAction: {
             signal: 'POPUP_BACK'
         }
     });
-    setTimeout(() => resolveCommand({
-        signalAction: {
-            signal: 'SOFT_RELOAD_PAGE'
-        }
-    }), 100);
 }
 
 // YouTube moved the "Not interested" / "Don't recommend channel" feedback tokens
