@@ -79,6 +79,14 @@ export function patchResolveCommand() {
                 } else if (cmd?.playlistEditEndpoint?.customAction) {
                     customAction(cmd.playlistEditEndpoint.customAction.action, cmd.playlistEditEndpoint.customAction.parameters);
                     return true;
+                } else if (isHomeBrowseEndpoint(cmd?.browseEndpoint) && isHomePage()) {
+                    // YouTube treats selecting an already-selected Home entry as a no-op.
+                    // Turn it into a soft reload so the recommendations are fetched again.
+                    return ogResolve.call(this, {
+                        signalAction: {
+                            signal: 'SOFT_RELOAD_PAGE'
+                        }
+                    }, _);
                 } else if (cmd?.openPopupAction?.uniqueId === 'playback-settings') {
                     // Patch the playback settings popup to use TizenTube speed settings
                     const items = cmd.openPopupAction.popup.overlaySectionRenderer.overlay.overlayTwoPanelRenderer.actionPanel.overlayPanelRenderer.content.overlayPanelItemListRenderer.items;
@@ -257,16 +265,19 @@ function customAction(action, parameters) {
             hideVideoLocally(parameters.videoId);
             if (parameters.panel) markFeedback(parameters.panel, 0, true);
             showToast('TizenTube', t('toasts.videoHidden'));
+            refreshCurrentFeed();
             break;
         case 'DONT_RECOMMEND_CHANNEL':
+            // Keep a local block as well as YouTube's account-level feedback so
+            // every visible tile from the channel disappears on this refresh.
+            if (parameters.channel) blockChannel(parameters.channel);
             if (parameters.panel) {
                 markFeedback(parameters.panel, 1, false);
                 showToast('TizenTube', t('toasts.channelNotRecommended'));
             } else if (parameters.channel) {
-                // No feedback panel on this item, so YouTube can't be told; block locally instead.
-                blockChannel(parameters.channel);
                 showToast('TizenTube', t('toasts.channelBlocked', { name: parameters.channel.name || parameters.channel.id }));
             }
+            refreshCurrentFeed();
             break;
         case 'CLEAR_HIDDEN_VIDEOS':
             configWrite('hiddenVideos', []);
@@ -275,6 +286,7 @@ function customAction(action, parameters) {
         case 'BLOCK_CHANNEL':
             blockChannel(parameters);
             showToast('TizenTube', t('toasts.channelBlocked', { name: parameters.name || parameters.id }));
+            refreshCurrentFeed();
             break;
         case 'FEEDBACK_REASON':
             sendFeedbackToken(parameters.token)
@@ -342,6 +354,33 @@ function customAction(action, parameters) {
             window.screenTurnedOffAt = Date.now();
             break;
     }
+}
+
+const HOME_BROWSE_IDS = new Set(['FEwhat_to_watch', 'FEhome']);
+
+function isHomeBrowseEndpoint(endpoint) {
+    return HOME_BROWSE_IDS.has(endpoint?.browseId);
+}
+
+function isHomePage() {
+    const hash = window.location?.hash ?? '';
+    return hash === '' || hash === '#/' || hash === '#/browse'
+        || [...HOME_BROWSE_IDS].some((browseId) => hash.includes(browseId));
+}
+
+function refreshCurrentFeed() {
+    // Close the long-press menu first. The short delay lets the close command
+    // finish before the route is reloaded and its freshly filtered data renders.
+    resolveCommand({
+        signalAction: {
+            signal: 'POPUP_BACK'
+        }
+    });
+    setTimeout(() => resolveCommand({
+        signalAction: {
+            signal: 'SOFT_RELOAD_PAGE'
+        }
+    }), 100);
 }
 
 // YouTube moved the "Not interested" / "Don't recommend channel" feedback tokens
