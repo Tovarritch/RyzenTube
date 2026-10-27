@@ -1,0 +1,55 @@
+const assert = require('node:assert/strict');
+const { resolve } = require('node:path');
+const { test } = require('node:test');
+const { chromium } = require('playwright');
+
+test('Back resets native row selection, then feed selection, then resumes normal Back', async () => {
+    const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH });
+    try {
+        const page = await browser.newPage();
+        await page.setContent(`
+            <yt-virtual-list id="vertical">
+                <yt-virtual-list id="horizontal">
+                    <ytlr-tile-renderer><button id="tile">Video</button></ytlr-tile-renderer>
+                </yt-virtual-list>
+            </yt-virtual-list>
+            <div role="dialog"><ytlr-tile-renderer><button id="dialog">Dialog</button></ytlr-tile-renderer></div>
+        `);
+        await page.evaluate(() => {
+            window.normalBack = 0;
+            window.resets = [];
+            for (const [id, layout, index] of [['horizontal', 'horizontal', 80], ['vertical', 'vertical', 100]]) {
+                document.getElementById(id).__instance = {
+                    props: { layout, selectedIndex: index },
+                    ga(index) { this.props.selectedIndex = index; window.resets.push(id); },
+                };
+            }
+            document.addEventListener('keyup', event => {
+                if (event.key === 'Escape') window.normalBack++;
+            });
+        });
+        await page.addScriptTag({ path: resolve(__dirname, '../mods/features/backToStart.js') });
+        await page.locator('#tile').focus();
+        await page.keyboard.press('Escape');
+        assert.deepEqual(await page.evaluate(() => window.resets), ['horizontal']);
+        assert.equal(await page.evaluate(() => window.normalBack), 0);
+        await page.keyboard.press('Escape');
+        assert.deepEqual(await page.evaluate(() => window.resets), ['horizontal', 'vertical']);
+        await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(() => window.normalBack), 1);
+
+        await page.locator('#dialog').focus();
+        await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(() => window.normalBack), 2, 'Popups keep normal Back');
+        await page.locator('#tile').focus();
+        await page.evaluate(() => {
+            window.location.hash = '/watch?v=test';
+            document.getElementById('horizontal').__instance.props.selectedIndex = 70;
+        });
+        await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(() => window.normalBack), 3, 'Watch page keeps normal Back');
+        assert.deepEqual(await page.evaluate(() => window.resets), ['horizontal', 'vertical']);
+    } finally {
+        await browser.close();
+    }
+});

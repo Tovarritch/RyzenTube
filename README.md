@@ -54,6 +54,11 @@ The last command opens `http://localhost:8099/tv` in the default browser. Use
 override the port with the `TIZENTUBE_DEV_PORT` environment variable.
 
 ## ✨ Features
+
+- **Back to start:** While browsing video tiles, press Back to return to the start
+  of a row. Press Back again to return to the top of the feed. Back works normally
+  once at the start, and while watching videos or using pop-ups.
+
 - 📺 **Picture-in-Picture Mode**
 - 🛑 **Ad Blocker**: Enjoy your favourite streaming website without interruptions from ads.
 - ❗ **SponsorBlock Support**: Automatically skip sponsored segments in videos.

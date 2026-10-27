@@ -55,6 +55,25 @@ test('late dislike response updates TV icons and description, respects opt-out a
         await page.evaluate(() => window.pending['video-b'](99));
         await page.waitForTimeout(50);
         assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Late response must not bypass opt-out');
+
+        // Current TV markup has minified classes, no English label and a
+        // native component model that must be forced to render after editing.
+        await page.evaluate(() => {
+            const host = document.querySelector('ytlr-like-button-renderer');
+            host.innerHTML = '<div class="rNIdJc"><span class="zn4D2"></span></div>';
+            host.__instance = {
+                props: { data: {} },
+                K() { throw new Error('Must use force-render for unchanged state'); },
+                Fa() {
+                    host.querySelector('span').textContent = this.props.data.dislikeCountText?.simpleText || '';
+                },
+            };
+            window.toggle(true);
+        });
+        await page.waitForFunction(() => document.querySelector('.zn4D2').textContent === '99');
+        assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Native title must not have an extra appended count');
+        await page.evaluate(() => window.toggle(false));
+        assert.equal(await page.locator('.zn4D2').innerText(), '', 'Opt-out restores the original native title');
     } finally {
         await browser.close();
     }

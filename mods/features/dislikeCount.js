@@ -9,6 +9,59 @@ let activeDislikes = null;
 let requestGeneration = 0;
 let retryAfter = 0;
 const BUTTON_SELECTOR = 'button, [role="button"], ytlr-button, ytlr-button-renderer, ytlr-toggle-button-renderer, ytlr-like-button';
+const nativeCounts = new Map();
+
+function repaint(instance, text) {
+  // Fa is the TV client's force-render operation. K({}) may be skipped when
+  // the shallow state comparison sees no change after editing props.data.
+  if (typeof instance.Fa === 'function') instance.Fa();
+  else instance.K({ ttDislikeCount: text });
+}
+
+// Current YouTube TV builds use minified CSS classes and expose their rendered
+// component on __instance. Update the native model so the normal button title
+// is laid out alongside the icon, including when the renderer is replaced.
+function updateNativeCounts() {
+  for (const host of nativeCounts.keys()) {
+    if (!host.isConnected) nativeCounts.delete(host);
+  }
+  let updatedButton = false;
+  const text = formatCount(activeDislikes);
+  for (const host of document.querySelectorAll('ytlr-like-button-renderer, ytlr-video-description-header-renderer')) {
+    const instance = host.__instance;
+    const data = instance?.props?.data;
+    if (!data || typeof instance.K !== 'function') continue;
+    if (host.tagName.toLowerCase() === 'ytlr-like-button-renderer') {
+      const keys = ['dislikeCountText', 'dislikeCountWithDislikeText', 'dislikeCountWithUndislikeText'];
+      const previous = nativeCounts.get(host);
+      if (previous?.videoId === activeVideoId && previous.text === text && previous.data === data
+          && data.dislikeCountText?.simpleText === text) {
+        updatedButton = true;
+        continue;
+      }
+      nativeCounts.set(host, { videoId: activeVideoId, text, data,
+        values: previous?.data === data ? previous.values : keys.map(key => data[key]) });
+      for (const key of keys) data[key] = { simpleText: text, accessibility: { accessibilityData: { label: `${text} Dislikes` } } };
+      repaint(instance, text);
+      updatedButton = true;
+    }
+  }
+  return updatedButton;
+}
+
+function clearCounts() {
+  for (const [host, saved] of nativeCounts) {
+    if (host.__instance?.props?.data !== saved.data) continue;
+    ['dislikeCountText', 'dislikeCountWithDislikeText', 'dislikeCountWithUndislikeText'].forEach((key, index) => {
+      if (saved.values[index] === undefined) delete saved.data[key];
+      else saved.data[key] = saved.values[index];
+    });
+    repaint(host.__instance, null);
+  }
+  nativeCounts.clear();
+  document.getElementById(COUNT_ID)?.remove();
+  document.getElementById(DESCRIPTION_COUNT_ID)?.remove();
+}
 
 function currentVideoId() {
   const playerId = document.querySelector('.html5-video-player')?.getVideoData?.()?.video_id;
@@ -48,6 +101,13 @@ function findActionButton(pattern) {
 }
 
 function findDislikeButton() {
+  const group = document.querySelector('ytlr-like-button-renderer');
+  const nativeButton = group && Array.from(group.querySelectorAll('*')).find(element =>
+    element.getAttribute('idomkey') === 'dislike-button'
+    || element.__instance?.props?.idomKey === 'dislike-button'
+    || element.__instance?.props?.icon === 'DISLIKE'
+  );
+  if (nativeButton) return nativeButton;
   const direct = findActionButton(/dislike|thumb(?:s)?[_ -]?down/i);
   if (direct) return direct;
 
@@ -86,6 +146,7 @@ function render() {
     const descriptionText = `${formatCount(activeDislikes)} Dislikes`;
     if (descriptionCount.textContent !== descriptionText) descriptionCount.textContent = descriptionText;
   }
+  if (updateNativeCounts()) return;
   const button = findDislikeButton();
   if (!button) return;
 
@@ -112,8 +173,7 @@ async function update() {
     activeVideoId = null;
     activeDislikes = null;
     requestGeneration++;
-    document.getElementById(COUNT_ID)?.remove();
-    document.getElementById(DESCRIPTION_COUNT_ID)?.remove();
+    clearCounts();
     return;
   }
   const videoId = currentVideoId();
@@ -125,8 +185,7 @@ async function update() {
 
   activeVideoId = videoId;
   activeDislikes = null;
-  document.getElementById(COUNT_ID)?.remove();
-  document.getElementById(DESCRIPTION_COUNT_ID)?.remove();
+  clearCounts();
   const generation = ++requestGeneration;
   retryAfter = Date.now() + 30000;
 
@@ -150,6 +209,7 @@ function init() {
   // when the controls were already rendered before the service responded.
   window.addEventListener('tt-dislike-votes', event => {
     if (!isReturnYoutubeDislikeEnabled() || event.detail?.videoId !== currentVideoId()) return;
+    if (activeVideoId !== event.detail.videoId) clearCounts();
     activeVideoId = event.detail.videoId;
     activeDislikes = event.detail.dislikes;
     render();
