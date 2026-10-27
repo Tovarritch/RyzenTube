@@ -174,11 +174,17 @@ div[idomkey="shadow"] {
 }
 
 .tt-search-refresh-button:focus,
-.tt-search-refresh-button.zylon-focus,
-.tt-search-refresh-button[focused] {
+.tt-search-refresh-button.tt-refresh-selected {
     background: #f1f1f1;
     color: #0f0f0f;
     outline: none;
+}
+
+/* YouTube can retain virtual focus on the search header while our added
+   navigation stop owns DOM focus. Its microphone must stay unselected. */
+ytlr-search-bar.tt-refresh-selected ytlr-search-voice-mic-button {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 .tt-search-refresh-icon {
