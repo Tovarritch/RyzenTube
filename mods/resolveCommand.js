@@ -10,12 +10,13 @@ import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 import { hideSelectedFeedItem, hideChannelFeedItems } from './utils/feedDom.js';
+import { isOkActivationEvent } from './utils/okKey.js';
 
 const OK_ACTIVATION_WINDOW_MS = 1500;
 let lastOkActivation = 0;
 
 document.addEventListener('keydown', (event) => {
-    if (!event.repeat && (event.key === 'Enter' || event.keyCode === 13 || event.which === 13)) {
+    if (isOkActivationEvent(event)) {
         lastOkActivation = Date.now();
     } else if (!event.repeat) {
         lastOkActivation = 0;
@@ -283,9 +284,13 @@ function customAction(action, parameters) {
             break;
         case 'REFRESH_HOME':
             // Guide endpoints can be resolved when an entry merely gains focus.
-            // Refresh only after a deliberate OK/Enter press on the remote.
-            if (!consumeOkActivation()) break;
-            resolveCommand({ signalAction: { signal: 'RELOAD_PAGE' } });
+            // YouTube can resolve the endpoint from its own key handler before our
+            // document listener records the same OK event. Check on the next task so
+            // a genuine press is retained without allowing focus alone to refresh.
+            setTimeout(() => {
+                if (!consumeOkActivation()) return;
+                resolveCommand({ signalAction: { signal: 'RELOAD_PAGE' } });
+            }, 0);
             break;
         case 'GO_TO_CHANNEL':
             requestNextAndNavigateChannel(parameters);
