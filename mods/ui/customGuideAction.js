@@ -17,7 +17,7 @@ function addRefreshBeforeHome(section) {
     section.items.splice(homeIndex, 0, GuideEntryRenderer(
         'Refresh',
         { customAction: { action: 'REFRESH_HOME' } },
-        'REFRESH'
+        'REPLAY'
     ));
 }
 

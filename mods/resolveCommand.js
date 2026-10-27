@@ -11,6 +11,24 @@ import showGuideSettings from './ui/sidebarModification.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 import { hideSelectedFeedItem, hideChannelFeedItems } from './utils/feedDom.js';
 
+const OK_ACTIVATION_WINDOW_MS = 1500;
+let lastOkActivation = 0;
+
+document.addEventListener('keydown', (event) => {
+    if (!event.repeat && (event.key === 'Enter' || event.keyCode === 13 || event.which === 13)) {
+        lastOkActivation = Date.now();
+    } else if (!event.repeat) {
+        lastOkActivation = 0;
+    }
+}, true);
+
+function consumeOkActivation() {
+    const wasActivated = lastOkActivation > 0
+        && Date.now() - lastOkActivation <= OK_ACTIVATION_WINDOW_MS;
+    lastOkActivation = 0;
+    return wasActivated;
+}
+
 export default function resolveCommand(cmd, _) {
     // resolveCommand function is pretty OP, it can do from opening modals, changing client settings and way more.
     // Because the client might change, we should find it first.
@@ -264,6 +282,9 @@ function customAction(action, parameters) {
             checkForUpdates(true);
             break;
         case 'REFRESH_HOME':
+            // Guide endpoints can be resolved when an entry merely gains focus.
+            // Refresh only after a deliberate OK/Enter press on the remote.
+            if (!consumeOkActivation()) break;
             resolveCommand({ signalAction: { signal: 'RELOAD_PAGE' } });
             break;
         case 'GO_TO_CHANNEL':
