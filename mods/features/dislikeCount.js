@@ -135,6 +135,21 @@ function render() {
       content.style.alignItems = 'center';
       content.style.paddingRight = '.5rem';
       content.appendChild(count);
+      // Cobalt also fixes the widths of the outer icon-button and like group.
+      // Growing only the inner div paints the number over Comments. Let the
+      // entire native slot participate in layout with its new content width.
+      const group = button.closest('ytlr-like-button-renderer');
+      if (group) {
+        for (let slot = button; slot; slot = slot.parentElement) {
+          if (!buttonStyles.has(slot)) buttonStyles.set(slot, slot.getAttribute('style'));
+          slot.style.width = 'auto';
+          slot.style.minWidth = 'min-content';
+          slot.style.flexShrink = '0';
+          slot.style.display = 'inline-flex';
+          slot.style.alignItems = 'center';
+          if (slot === group) break;
+        }
+      }
     } else button.appendChild(count);
   }
   const text = formatCount(activeDislikes);
