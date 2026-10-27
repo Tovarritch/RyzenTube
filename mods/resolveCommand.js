@@ -10,25 +10,6 @@ import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 import { hideSelectedFeedItem, hideChannelFeedItems } from './utils/feedDom.js';
-import { isOkActivationEvent } from './utils/okKey.js';
-
-const OK_ACTIVATION_WINDOW_MS = 1500;
-let lastOkActivation = 0;
-
-document.addEventListener('keydown', (event) => {
-    if (isOkActivationEvent(event)) {
-        lastOkActivation = Date.now();
-    } else if (!event.repeat) {
-        lastOkActivation = 0;
-    }
-}, true);
-
-function consumeOkActivation() {
-    const wasActivated = lastOkActivation > 0
-        && Date.now() - lastOkActivation <= OK_ACTIVATION_WINDOW_MS;
-    lastOkActivation = 0;
-    return wasActivated;
-}
 
 export default function resolveCommand(cmd, _) {
     // resolveCommand function is pretty OP, it can do from opening modals, changing client settings and way more.
@@ -281,16 +262,6 @@ function customAction(action, parameters) {
             break;
         case 'CHECK_FOR_UPDATES':
             checkForUpdates(true);
-            break;
-        case 'REFRESH_HOME':
-            // Guide endpoints can be resolved when an entry merely gains focus.
-            // YouTube can resolve the endpoint from its own key handler before our
-            // document listener records the same OK event. Check on the next task so
-            // a genuine press is retained without allowing focus alone to refresh.
-            setTimeout(() => {
-                if (!consumeOkActivation()) return;
-                resolveCommand({ signalAction: { signal: 'RELOAD_PAGE' } });
-            }, 0);
             break;
         case 'GO_TO_CHANNEL':
             requestNextAndNavigateChannel(parameters);

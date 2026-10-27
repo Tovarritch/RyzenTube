@@ -22,6 +22,7 @@ import "./features/pictureInPicture.js";
 import "./features/preferredVideoQuality.js";
 import "./features/videoQueuing.js";
 import "./features/dislikeCount.js";
+import "./features/searchRefreshButton.js";
 import "./features/enableFeatures.js";
 import "./ui/customUI.js";
 import "./ui/customGuideAction.js";
