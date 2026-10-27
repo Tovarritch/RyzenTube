@@ -322,6 +322,10 @@ export default function modernUI(update, parameters) {
                     value: 'enableShowOtherLanguages'
                 },
                 {
+                    name: t('settings.options.subtitles.options.stopForcedSubtitles'),
+                    value: 'enableStopForcedSubtitles'
+                },
+                {
                     name: t('settings.options.subtitles.options.persistCaptionStyle'),
                     value: 'enableCaptionStylePersistence'
                 }
@@ -820,6 +824,16 @@ export default function modernUI(update, parameters) {
                     name: t('settings.options.uiSettings.options.enableShrinkingThumbnails'),
                     value: 'enableShrinkingThumbnails',
                     icon: null,
+                },
+                {
+                    name: t('settings.options.uiSettings.options.hideMembersOnlyVideos'),
+                    value: 'hideMembersOnlyVideos',
+                    icon: 'VISIBILITY_OFF',
+                },
+                {
+                    name: t('settings.options.uiSettings.options.returnYoutubeDislike'),
+                    value: 'enableReturnYoutubeDislike',
+                    icon: 'STAR',
                 }
             ]
         },

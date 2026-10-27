@@ -47,6 +47,10 @@ function selectRefresh(button, searchBar) {
     for (const selected of searchBar.querySelectorAll('.zylon-focus')) {
         selected.classList.remove('zylon-focus');
     }
+    // Cobalt can keep the native text-entry element focused even after its
+    // virtual focus class is removed. Blur it before selecting Refresh so the
+    // Search box and Refresh are never painted as selected together.
+    returnTarget?.blur?.();
     refreshSelected = true;
     searchBar.classList.add('tt-refresh-selected');
     button.classList.add('tt-refresh-selected');

@@ -6,6 +6,9 @@ import { findFeedbackToken } from '../utils/innerTubeCalls.js';
 import { getVideoId, getChannelInfo, removeBlocked } from '../utils/blocklist.js';
 import { PatchSettings } from '../ui/customYTSettings.js';
 import { t } from 'i18next';
+import { filterMembersOnlyVideos } from './membersOnlyHider.js';
+import { stopForcedSubtitles } from './forcedSubtitleStopper.js';
+import { addDislikes } from './returnYoutubeDislike.js';
 
 /**
  * This is a minimal reimplementation of the following uBlock Origin rule:
@@ -20,6 +23,8 @@ const origParse = JSON.parse;
 JSON.parse = function () {
   const r = origParse.apply(this, arguments);
   try {
+    stopForcedSubtitles(r);
+    addDislikes(r);
     const adBlockEnabled = configRead('enableAdBlock');
     const signinReminderEnabled = configRead('enableSigninReminder');
 
@@ -94,7 +99,7 @@ JSON.parse = function () {
     ) {
       const gridContent = r.contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.gridRenderer;
       addLongPress(gridContent.items);
-      gridContent.items = removeBlocked(gridContent.items);
+      gridContent.items = filterMembersOnlyVideos(removeBlocked(gridContent.items));
     }
 
     if (r.endscreen && configRead('enableHideEndScreenCards')) {
@@ -134,12 +139,16 @@ JSON.parse = function () {
       deArrowify(r.continuationContents.horizontalListContinuation.items);
       hqify(r.continuationContents.horizontalListContinuation.items);
       addLongPress(r.continuationContents.horizontalListContinuation.items);
-      r.continuationContents.horizontalListContinuation.items = hideVideo(r.continuationContents.horizontalListContinuation.items);
+      r.continuationContents.horizontalListContinuation.items = filterMembersOnlyVideos(
+        hideVideo(r.continuationContents.horizontalListContinuation.items)
+      );
     }
 
     if (r?.continuationContents?.gridContinuation?.items) {
       addLongPress(r.continuationContents.gridContinuation.items);
-      r.continuationContents.gridContinuation.items = removeBlocked(r.continuationContents.gridContinuation.items);
+      r.continuationContents.gridContinuation.items = filterMembersOnlyVideos(
+        removeBlocked(r.continuationContents.gridContinuation.items)
+      );
     }
 
     if (r?.contents?.tvBrowseRenderer?.content?.tvSecondaryNavRenderer?.sections) {
@@ -166,7 +175,7 @@ JSON.parse = function () {
           }
           if (content?.gridRenderer?.items) {
             addLongPress(content.gridRenderer.items);
-            content.gridRenderer.items = removeBlocked(content.gridRenderer.items);
+            content.gridRenderer.items = filterMembersOnlyVideos(removeBlocked(content.gridRenderer.items));
           }
         }
       }
@@ -363,7 +372,9 @@ function processShelves(shelves, shouldAddPreviews = true) {
       if (shouldAddPreviews) {
         addPreviews(shelve.shelfRenderer.content.horizontalListRenderer.items);
       }
-      shelve.shelfRenderer.content.horizontalListRenderer.items = hideVideo(shelve.shelfRenderer.content.horizontalListRenderer.items);
+      shelve.shelfRenderer.content.horizontalListRenderer.items = filterMembersOnlyVideos(
+        hideVideo(shelve.shelfRenderer.content.horizontalListRenderer.items)
+      );
       if (!configRead('enableShorts')) {
         if (shelve.shelfRenderer.tvhtml5ShelfRendererType === 'TVHTML5_SHELF_RENDERER_TYPE_SHORTS') {
           shelves.splice(shelves.indexOf(shelve), 1);

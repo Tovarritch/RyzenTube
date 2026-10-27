@@ -187,6 +187,18 @@ ytlr-search-bar.tt-refresh-selected ytlr-search-voice-mic-button {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
+/* The TV client sometimes keeps its native Search focus paint after DOM focus
+   moves to the injected button. Suppress every Search-box focus surface while
+   Refresh owns this navigation stop. */
+ytlr-search-bar.tt-refresh-selected ytlr-search-text-box,
+ytlr-search-bar.tt-refresh-selected ytlr-search-text-box > *,
+ytlr-search-bar.tt-refresh-selected .ytLrSearchBarSearchBox,
+ytlr-search-bar.tt-refresh-selected .ytLrSearchBarSearchBoxHost {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
 .tt-search-refresh-icon {
     display: block;
     font-family: sans-serif;

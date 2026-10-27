@@ -72,6 +72,7 @@
                 "options": {
                     "showLocalSubtitle": "Show Local Subtitle",
                     "showHiddenSubtitles": "Show Hidden Subtitles",
+                    "stopForcedSubtitles": "Stop Videos Turning Subtitles On",
                     "persistCaptionStyle": "Remember Caption Style"
                 }
             },
@@ -200,6 +201,8 @@
                     },
                     "sortSubscriptionsByAlphabet": "Sort Subscriptions Alphabetically",
                     "disableChannelsOnSidebar": "Disable Channels on Sidebar",
+                    "hideMembersOnlyVideos": "Hide Members-Only Videos",
+                    "returnYoutubeDislike": "Return YouTube Dislike (sends video IDs to returnyoutubedislike.com)",
                     "clock": {
                         "title": "Clock",
                         "subtitle": "Display a clock on the screen",

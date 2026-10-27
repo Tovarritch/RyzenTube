@@ -14,6 +14,9 @@ test('remote navigation reaches Refresh even when native navigation skips it', a
     try {
         const page = await browser.newPage();
         await page.setContent(`
+            <style>
+                #search.zylon-focus, #search:focus { background-color: rgb(255, 255, 255); }
+            </style>
             <ytlr-search-bar style="display:block;position:relative;height:70px">
                 <ytlr-search-voice><button id="mic">Microphone</button></ytlr-search-voice>
                 <ytlr-search-text-box><div id="search" tabindex="0">Search</div></ytlr-search-text-box>
@@ -59,6 +62,11 @@ test('remote navigation reaches Refresh even when native navigation skips it', a
         assert.equal(await active(), 'tt-refresh-button', 'Right must reach Refresh');
         assert.equal(await reloads(), 0, 'Selecting Refresh must not reload');
         assert.equal(await page.locator('ytlr-search-bar .zylon-focus').count(), 0, 'Old Search highlight must be cleared');
+        assert.equal(
+            await page.locator('#search').evaluate(element => getComputedStyle(element).backgroundColor),
+            'rgba(0, 0, 0, 0)',
+            'Search focus paint must be suppressed while Refresh is selected'
+        );
         await page.keyboard.press('Enter');
         assert.equal(await reloads(), 1, 'OK on Refresh must reload exactly once');
         await page.keyboard.press('ArrowLeft');

@@ -1,4 +1,5 @@
-const API_URL = 'https://returnyoutubedislikeapi.com/votes?videoId=';
+import { isReturnYoutubeDislikeEnabled, requestVotes } from './returnYoutubeDislike.js';
+
 const COUNT_ID = 'tt-dislike-count';
 
 let activeVideoId = null;
@@ -89,6 +90,12 @@ function render() {
 }
 
 async function update() {
+  if (!isReturnYoutubeDislikeEnabled()) {
+    activeVideoId = null;
+    activeDislikes = null;
+    document.getElementById(COUNT_ID)?.remove();
+    return;
+  }
   const videoId = currentVideoId();
   if (!videoId) return;
   if (videoId === activeVideoId) {
@@ -102,11 +109,9 @@ async function update() {
   const generation = ++requestGeneration;
 
   try {
-    const response = await fetch(`${API_URL}${encodeURIComponent(videoId)}`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
+    const data = await requestVotes(videoId);
     if (generation !== requestGeneration || activeVideoId !== videoId) return;
-    if (typeof data.dislikes !== 'number') throw new Error('Missing dislikes count');
+    if (typeof data?.dislikes !== 'number') throw new Error('Missing dislikes count');
     activeDislikes = Math.max(0, Math.round(data.dislikes));
     render();
   } catch (error) {
