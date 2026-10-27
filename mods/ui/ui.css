@@ -187,16 +187,20 @@ ytlr-search-bar.tt-refresh-selected ytlr-search-voice-mic-button {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* The TV client sometimes keeps its native Search focus paint after DOM focus
-   moves to the injected button. Suppress every Search-box focus surface while
-   Refresh owns this navigation stop. */
-ytlr-search-bar.tt-refresh-selected ytlr-search-text-box,
-ytlr-search-bar.tt-refresh-selected ytlr-search-text-box > *,
-ytlr-search-bar.tt-refresh-selected .ytLrSearchBarSearchBox,
-ytlr-search-bar.tt-refresh-selected .ytLrSearchBarSearchBoxHost {
-    background-color: transparent !important;
+/* Keep the search field readable when the client retains virtual focus. Do
+   not clear every child's background: the field uses contrasting text. */
+ytlr-search-bar.tt-refresh-selected ytlr-search-text-box {
+    background-color: #272727 !important;
+    color: #f1f1f1 !important;
+}
+ytlr-search-bar.tt-refresh-selected ytlr-search-text-box * {
+    color: #f1f1f1 !important;
     box-shadow: none !important;
     outline: none !important;
+}
+ytlr-search-bar.tt-refresh-selected ytlr-search-text-box > *,
+ytlr-search-bar.tt-refresh-selected ytlr-search-text-box .zylon-focus {
+    background-color: #272727 !important;
 }
 
 .tt-search-refresh-icon {

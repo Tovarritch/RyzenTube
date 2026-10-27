@@ -5,6 +5,11 @@ const DESCRIPTION_PANEL = 'video-description-ep-identifier';
 const MAX_CACHED = 200;
 const votesByVideo = new Map();
 const inFlight = new Map();
+let currentResponseVideoId = null;
+
+export function getResponseVideoId() {
+    return currentResponseVideoId;
+}
 
 export function isReturnYoutubeDislikeEnabled() {
     return configRead('enableReturnYoutubeDislike') === true;
@@ -69,7 +74,7 @@ function remember(videoId, votes) {
 }
 
 export function requestVotes(videoId) {
-    if (!videoId) return Promise.resolve(null);
+    if (!isReturnYoutubeDislikeEnabled() || !videoId) return Promise.resolve(null);
     if (votesByVideo.has(videoId)) return Promise.resolve(votesByVideo.get(videoId));
     if (inFlight.has(videoId)) return inFlight.get(videoId);
     const request = fetch(`${API_URL}${encodeURIComponent(videoId)}`)
@@ -78,7 +83,9 @@ export function requestVotes(videoId) {
             return response.json();
         })
         .then(votes => {
+            if (!Number.isFinite(votes?.dislikes) || votes.dislikes < 0) throw new Error('Invalid dislike count');
             remember(videoId, votes);
+            window.dispatchEvent?.(new CustomEvent('tt-dislike-votes', { detail: { videoId, dislikes: votes.dislikes } }));
             return votes;
         })
         .catch(error => {
@@ -99,7 +106,11 @@ export function requestVotes(videoId) {
  */
 export function addDislikes(response) {
     if (!isReturnYoutubeDislikeEnabled()) return response;
-    const videoId = findVideoId(response);
+    const responseVideoId = findVideoId(response);
+    if (responseVideoId) currentResponseVideoId = responseVideoId;
+    // The controls and description can arrive separately from the player
+    // response, without repeating its video ID.
+    const videoId = responseVideoId || ((response?.transportControls || response?.engagementPanels) && currentResponseVideoId);
     if (!videoId) return response;
     requestVotes(videoId);
     const votes = votesByVideo.get(videoId);

@@ -1,17 +1,21 @@
-import { isReturnYoutubeDislikeEnabled, requestVotes } from './returnYoutubeDislike.js';
+import { isReturnYoutubeDislikeEnabled, requestVotes, getResponseVideoId } from './returnYoutubeDislike.js';
+import { configChangeEmitter } from '../config.js';
 
 const COUNT_ID = 'tt-dislike-count';
+const DESCRIPTION_COUNT_ID = 'tt-description-dislike-count';
 
 let activeVideoId = null;
 let activeDislikes = null;
 let requestGeneration = 0;
+let retryAfter = 0;
+const BUTTON_SELECTOR = 'button, [role="button"], ytlr-button, ytlr-button-renderer, ytlr-toggle-button-renderer, ytlr-like-button';
 
 function currentVideoId() {
   const playerId = document.querySelector('.html5-video-player')?.getVideoData?.()?.video_id;
   if (playerId) return playerId;
   try {
     const route = new URL(location.hash.substring(1), location.href);
-    return route.searchParams.get('v');
+    return route.searchParams.get('v') || getResponseVideoId();
   } catch (_) {
     return null;
   }
@@ -29,22 +33,22 @@ function buttonLabel(element) {
 }
 
 function findActionButton(pattern) {
-  const buttonSelector = 'button, [role="button"], ytlr-button, ytlr-button-renderer, ytlr-toggle-button-renderer';
+  const buttonSelector = BUTTON_SELECTOR;
   for (const element of document.querySelectorAll(buttonSelector)) {
     if (pattern.test(buttonLabel(element))) return element;
   }
 
-  for (const icon of document.querySelectorAll('[icon], [icon-type], yt-icon, .yt-icon')) {
+  for (const icon of document.querySelectorAll('[icon], [icon-type], [class*="Thumb"], [class*="thumb"], [class*="Dislike"], [class*="dislike"], yt-icon, .yt-icon')) {
     const hint = `${icon.getAttribute?.('icon') || ''} ${icon.getAttribute?.('icon-type') || ''} ${icon.id || ''} ${icon.className || ''}`;
     if (pattern.test(hint)) {
-      return icon.closest(buttonSelector);
+      return icon.closest(buttonSelector) || icon.closest('ytlr-like-button-renderer') || icon.parentElement;
     }
   }
   return null;
 }
 
 function findDislikeButton() {
-  const direct = findActionButton(/\b(dislike|thumb(?:s)?[_ -]?down)\b/i);
+  const direct = findActionButton(/dislike|thumb(?:s)?[_ -]?down/i);
   if (direct) return direct;
 
   // Some TV builds expose a label only for Like. Dislike is the adjacent
@@ -67,7 +71,21 @@ function likeCountTemplate(dislikeButton) {
 }
 
 function render() {
-  if (activeDislikes === null) return;
+  if (!isReturnYoutubeDislikeEnabled() || activeDislikes === null) return;
+  // The description can be opened after playback has begun and after its
+  // response has been consumed. Render the fetched count there as well.
+  const header = document.querySelector('ytlr-video-description-header-renderer, ytlr-video-description-header');
+  if (header) {
+    let descriptionCount = header.querySelector(`#${DESCRIPTION_COUNT_ID}`);
+    if (!descriptionCount) {
+      descriptionCount = document.createElement('div');
+      descriptionCount.id = DESCRIPTION_COUNT_ID;
+      descriptionCount.style.cssText = 'color:inherit;font:inherit;margin-top:.5em';
+      header.appendChild(descriptionCount);
+    }
+    const descriptionText = `${formatCount(activeDislikes)} Dislikes`;
+    if (descriptionCount.textContent !== descriptionText) descriptionCount.textContent = descriptionText;
+  }
   const button = findDislikeButton();
   if (!button) return;
 
@@ -93,12 +111,14 @@ async function update() {
   if (!isReturnYoutubeDislikeEnabled()) {
     activeVideoId = null;
     activeDislikes = null;
+    requestGeneration++;
     document.getElementById(COUNT_ID)?.remove();
+    document.getElementById(DESCRIPTION_COUNT_ID)?.remove();
     return;
   }
   const videoId = currentVideoId();
   if (!videoId) return;
-  if (videoId === activeVideoId) {
+  if (videoId === activeVideoId && (activeDislikes !== null || Date.now() < retryAfter)) {
     render();
     return;
   }
@@ -106,11 +126,13 @@ async function update() {
   activeVideoId = videoId;
   activeDislikes = null;
   document.getElementById(COUNT_ID)?.remove();
+  document.getElementById(DESCRIPTION_COUNT_ID)?.remove();
   const generation = ++requestGeneration;
+  retryAfter = Date.now() + 30000;
 
   try {
     const data = await requestVotes(videoId);
-    if (generation !== requestGeneration || activeVideoId !== videoId) return;
+    if (!isReturnYoutubeDislikeEnabled() || generation !== requestGeneration || activeVideoId !== videoId) return;
     if (typeof data?.dislikes !== 'number') throw new Error('Missing dislikes count');
     activeDislikes = Math.max(0, Math.round(data.dislikes));
     render();
@@ -124,6 +146,22 @@ function init() {
   new MutationObserver(render).observe(document.body, { childList: true, subtree: true });
   window.addEventListener('hashchange', () => setTimeout(update, 100));
   document.addEventListener('loadedmetadata', update, true);
+  // Update immediately when the response-level request finishes, including
+  // when the controls were already rendered before the service responded.
+  window.addEventListener('tt-dislike-votes', event => {
+    if (!isReturnYoutubeDislikeEnabled() || event.detail?.videoId !== currentVideoId()) return;
+    activeVideoId = event.detail.videoId;
+    activeDislikes = event.detail.dislikes;
+    render();
+  });
+  configChangeEmitter.addEventListener('configChange', event => {
+    if (event.detail?.key === 'enableReturnYoutubeDislike') {
+      activeVideoId = null;
+      activeDislikes = null;
+      retryAfter = 0;
+      update();
+    }
+  });
   setInterval(update, 1500);
   update();
 }

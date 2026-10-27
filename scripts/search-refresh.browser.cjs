@@ -64,9 +64,11 @@ test('remote navigation reaches Refresh even when native navigation skips it', a
         assert.equal(await page.locator('ytlr-search-bar .zylon-focus').count(), 0, 'Old Search highlight must be cleared');
         assert.equal(
             await page.locator('#search').evaluate(element => getComputedStyle(element).backgroundColor),
-            'rgba(0, 0, 0, 0)',
-            'Search focus paint must be suppressed while Refresh is selected'
+            'rgb(39, 39, 39)',
+            'Search must retain a visible unfocused background while Refresh is selected'
         );
+        assert.equal(await page.locator('#search').evaluate(element => getComputedStyle(element).color), 'rgb(241, 241, 241)');
+        assert.equal(await page.locator('#search').isVisible(), true);
         await page.keyboard.press('Enter');
         assert.equal(await reloads(), 1, 'OK on Refresh must reload exactly once');
         await page.keyboard.press('ArrowLeft');

@@ -267,9 +267,9 @@ function customAction(action, parameters) {
             break;
         case 'NOT_INTERESTED':
             hideVideoLocally(parameters.videoId);
-            if (parameters.panel) markFeedback(parameters.panel, 0, false);
             showToast('TizenTube', t('toasts.videoHidden'));
             dismissVideoMenu();
+            if (parameters.panel) markFeedback(parameters.panel, 0, true);
             break;
         case 'DONT_RECOMMEND_CHANNEL':
             // Filter future feed responses; leave the current rendered layout
@@ -295,11 +295,7 @@ function customAction(action, parameters) {
         case 'FEEDBACK_REASON':
             sendFeedbackToken(parameters.token)
                 .then(() => {
-                    resolveCommand({
-                        signalAction: {
-                            signal: 'POPUP_BACK'
-                        }
-                    });
+                    // The reason button already dismissed the dialogue.
                     showToast('TizenTube', t('toasts.feedbackSent'));
                 })
                 .catch(err => console.error('TizenTube: failed to send feedback:', err));
