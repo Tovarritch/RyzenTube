@@ -1,6 +1,19 @@
 import { isOkActivationEvent } from '../utils/okKey.js';
 
 const BUTTON_ID = 'tt-refresh-button';
+const FOCUS_STATE_CLASSES = new Set([
+    'zylon-focus',
+    'focused',
+    'focus-visible',
+    'yt-focused',
+    'ytlr-focused'
+]);
+
+function copyVisualClasses(source, target) {
+    for (const className of source?.classList || []) {
+        if (!FOCUS_STATE_CLASSES.has(className)) target.classList.add(className);
+    }
+}
 
 function iconClassMap() {
     return Object.values(window._yttv || {}).find(value =>
@@ -50,9 +63,32 @@ function createBareButton() {
     return button;
 }
 
+function createButtonFromVoiceControl(voiceButton) {
+    const button = document.createElement('ytlr-search-voice');
+    copyVisualClasses(voiceButton, button);
+
+    const sourceFace = voiceButton.querySelector('ytlr-search-voice-mic-button');
+    const face = document.createElement('ytlr-search-voice-mic-button');
+    copyVisualClasses(sourceFace, face);
+    face.setAttribute('hybridnavfocusable', 'true');
+    face.setAttribute('tabindex', '-1');
+
+    const sourceIcon = sourceFace?.querySelector('yt-icon');
+    const icon = document.createElement('yt-icon');
+    copyVisualClasses(sourceIcon, icon);
+    icon.setAttribute('tabindex', '-1');
+
+    face.appendChild(icon);
+    button.appendChild(face);
+    return button;
+}
+
 function createRefreshButton(searchBar) {
     const voiceButton = searchBar.querySelector('ytlr-search-voice');
-    const button = voiceButton ? voiceButton.cloneNode(true) : createBareButton();
+    // Do not clone the node itself: YouTube places transient zylon-focus state
+    // and navigation identity on it. Copying that state makes Search, microphone
+    // and Refresh appear focused at the same time.
+    const button = voiceButton ? createButtonFromVoiceControl(voiceButton) : createBareButton();
     button.id = BUTTON_ID;
     button.setAttribute('idomkey', 'TizenTubeSearchRefresh');
     button.setAttribute('tabindex', '0');
@@ -97,4 +133,4 @@ const observer = new MutationObserver(ensureRefreshButton);
 observer.observe(document.body, { childList: true, subtree: true });
 ensureRefreshButton();
 
-export { createRefreshButton, refreshButtonHasFocus };
+export { copyVisualClasses, createRefreshButton, refreshButtonHasFocus };
