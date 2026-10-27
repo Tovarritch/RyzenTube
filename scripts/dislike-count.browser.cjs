@@ -57,28 +57,44 @@ test('late dislike response updates TV icons and description, respects opt-out a
         await page.waitForTimeout(50);
         assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Late response must not bypass opt-out');
 
-        // Current TV markup has minified classes, no English label and a
-        // native component model that must be forced to render after editing.
+        // Model the TV's native count title below the focused icon. The state
+        // updater name is discovered from its selection callback, not pinned.
         await page.evaluate(() => {
             const host = document.querySelector('ytlr-like-button-renderer');
-            host.innerHTML = '<yt-icon-button idomkey="dislike-button"><yt-button-container idomkey="dislike-button" role="button"><div style="width:2.5rem"><yt-button-graphic><yt-icon></yt-icon></yt-button-graphic></div></yt-button-container></yt-icon-button>';
+            host.style.cssText = 'display:inline-block;width:2.5rem';
+            host.innerHTML = '<yt-icon-button style="display:inline-block;width:2.5rem" idomkey="dislike-button"><yt-button-container style="display:inline-block;width:2.5rem" idomkey="dislike-button" role="button"><div style="width:2.5rem"><yt-button-graphic style="display:inline-block;min-width:2rem">▼</yt-button-graphic></div></yt-button-container></yt-icon-button>';
+            const comments = document.createElement('span');
+            comments.id = 'comments';
+            comments.textContent = 'Comments';
+            host.after(comments);
             host.__instance = {
                 props: { data: {} },
-                K() { throw new Error('Must use force-render for unchanged state'); },
-                Fa() {
-                    // The real icon-only shape updates accessibility but does
-                    // not draw the title from dislikeCountText.
-                    host.querySelector('[role="button"]').setAttribute('aria-label', this.props.data.dislikeCountText?.simpleText || '');
+                state: { selectedIndex: 1 },
+                J(state) {
+                    this.state = { ...this.state, ...state };
+                    let title = host.querySelector('#native-dislike-title');
+                    if (!title) {
+                        title = document.createElement('span');
+                        title.id = 'native-dislike-title';
+                        title.style.cssText = 'display:block;position:absolute;top:100%';
+                        host.querySelector('[role="button"]').appendChild(title);
+                    }
+                    title.textContent = this.props.data.dislikeCountText?.simpleText || 'Dislike';
                 },
             };
+            host.__instance.ea = function(b){this.J({selectedIndex:b});};
             window.toggle(true);
         });
-        await page.waitForFunction(() => document.getElementById('tt-dislike-count')?.textContent === '99');
-        assert.equal(await page.locator('yt-button-container > div > #tt-dislike-count').count(), 1, 'Icon-only native shape must get a visible inline number');
-        assert.equal(await page.locator('yt-button-container > div').evaluate(element => element.style.width), 'auto');
+        await page.waitForFunction(() => document.getElementById('native-dislike-title')?.textContent === '99');
+        assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Never add a second count beside the native title');
+        assert.equal(await page.locator('#native-dislike-title').count(), 1);
+        assert.equal(await page.locator('ytlr-like-button-renderer').evaluate(el => el.__instance.state.selectedIndex), 1, 'Updating the count preserves native focus');
+        assert.equal(await page.locator('yt-button-container > div').evaluate(element => element.style.width), '2.5rem', 'Native button dimensions stay unchanged');
         await page.evaluate(() => window.toggle(false));
         assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Opt-out removes the inline count');
+        assert.equal(await page.locator('#native-dislike-title').innerText(), 'Dislike', 'Opt-out restores the original title');
         assert.equal(await page.locator('yt-button-container > div').evaluate(element => element.style.width), '2.5rem');
+        assert.equal(await page.locator('ytlr-like-button-renderer').evaluate(element => element.style.width), '2.5rem');
     } finally {
         await browser.close();
     }

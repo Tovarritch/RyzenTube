@@ -11,8 +11,18 @@ let requestGeneration = 0;
 let retryAfter = 0;
 const BUTTON_SELECTOR = 'button, [role="button"], ytlr-button, ytlr-button-renderer, ytlr-toggle-button-renderer, ytlr-like-button';
 const buttonStyles = new Map();
+const nativeModels = new Map();
+const countFields = ['dislikeCountText', 'dislikeCountWithDislikeText', 'dislikeCountWithUndislikeText'];
 
 function clearCounts() {
+  for (const [instance, saved] of nativeModels) {
+    for (const key of countFields) {
+      if (saved.original[key] === undefined) delete saved.data[key];
+      else saved.data[key] = saved.original[key];
+    }
+    saved.update({ ttDislikeCount: null });
+  }
+  nativeModels.clear();
   for (const [element, style] of buttonStyles) {
     if (style === null) element.removeAttribute('style');
     else element.setAttribute('style', style);
@@ -20,6 +30,34 @@ function clearCounts() {
   buttonStyles.clear();
   document.getElementById(COUNT_ID)?.remove();
   document.getElementById(DESCRIPTION_COUNT_ID)?.remove();
+}
+
+function renderNativeCount(button, text) {
+  const instance = button.closest('ytlr-like-button-renderer')?.__instance;
+  const data = instance?.props?.data;
+  if (!data) return false;
+  let saved = nativeModels.get(instance);
+  if (!saved || saved.data !== data) {
+    // The native selection callback calls the component's state updater.
+    // Its minified name differs by client; derive it instead of guessing K/J.
+    const selector = Object.values(instance).find(value => typeof value === 'function'
+      && /this\.([\w$]+)\(\{selectedIndex:[\w$]+\}\)/.test(String(value)));
+    const method = selector && String(selector).match(/this\.([\w$]+)\(\{selectedIndex:[\w$]+\}\)/)?.[1];
+    if (!method || typeof instance[method] !== 'function') return false;
+    saved = { data, original: Object.fromEntries(countFields.map(key => [key, data[key]])), update: state => instance[method](state) };
+    nativeModels.set(instance, saved);
+  }
+  const changed = countFields.some(key => data[key]?.simpleText !== text);
+  if (changed || saved.text !== text) {
+    for (const key of countFields) data[key] = { simpleText: text, accessibility: { accessibilityData: { label: `${text} Dislikes` } } };
+    saved.text = text;
+    // Keep native selection, commands, dimensions and title placement intact.
+    // The native title appears BELOW the focused icon, exactly like Likes.
+    saved.update({ ttDislikeCount: `${activeVideoId}:${text}` });
+  }
+  document.getElementById(COUNT_ID)?.remove();
+  setDiagnostic('dislikeDisplay', 'Native count below thumbs-down');
+  return true;
 }
 
 function currentVideoId() {
@@ -97,21 +135,28 @@ function render() {
   // response has been consumed. Render the fetched count there as well.
   const header = document.querySelector('ytlr-video-description-header-renderer, ytlr-video-description-header');
   if (header) {
+    const nativeFactoid = Array.from(header.querySelectorAll('*')).some(element =>
+      !element.children.length && element.textContent.trim() === 'Dislikes'
+      && !element.closest(`#${DESCRIPTION_COUNT_ID}`));
     let descriptionCount = header.querySelector(`#${DESCRIPTION_COUNT_ID}`);
-    if (!descriptionCount) {
+    if (nativeFactoid) descriptionCount?.remove();
+    else if (!descriptionCount) {
       descriptionCount = document.createElement('div');
       descriptionCount.id = DESCRIPTION_COUNT_ID;
       descriptionCount.style.cssText = 'color:inherit;font:inherit;margin-top:.5em';
       header.appendChild(descriptionCount);
     }
     const descriptionText = `${formatCount(activeDislikes)} Dislikes`;
-    if (descriptionCount.textContent !== descriptionText) descriptionCount.textContent = descriptionText;
+    if (!nativeFactoid && descriptionCount.textContent !== descriptionText) descriptionCount.textContent = descriptionText;
   }
   const button = findDislikeButton();
   if (!button) {
     setDiagnostic('dislikeDisplay', 'Count received; thumbs-down control not found');
     return;
   }
+
+  const text = formatCount(activeDislikes);
+  if (renderNativeCount(button, text)) return;
 
   let count = button.querySelector(`#${COUNT_ID}`);
   if (!count) {
@@ -120,41 +165,14 @@ function render() {
     count = template ? template.cloneNode(false) : document.createElement('span');
     count.id = COUNT_ID;
     count.removeAttribute?.('aria-label');
-    if (!template) {
-      count.style.cssText = 'display:inline-block;margin-left:.35em;font:inherit;color:inherit';
-    }
-    // In the live TV client the clickable control contains a fixed-width div
-    // with the icon. Appending outside it can be clipped or never laid out.
-    // Extend that content box and insert the number beside the icon itself.
-    const content = nativeContainer && button.firstElementChild;
-    if (content) {
-      if (!buttonStyles.has(content)) buttonStyles.set(content, content.getAttribute('style'));
-      content.style.width = 'auto';
-      content.style.minWidth = '2.5rem';
-      content.style.display = 'flex';
-      content.style.alignItems = 'center';
-      content.style.paddingRight = '.5rem';
-      content.appendChild(count);
-      // Cobalt also fixes the widths of the outer icon-button and like group.
-      // Growing only the inner div paints the number over Comments. Let the
-      // entire native slot participate in layout with its new content width.
-      const group = button.closest('ytlr-like-button-renderer');
-      if (group) {
-        for (let slot = button; slot; slot = slot.parentElement) {
-          if (!buttonStyles.has(slot)) buttonStyles.set(slot, slot.getAttribute('style'));
-          slot.style.width = 'auto';
-          slot.style.minWidth = 'min-content';
-          slot.style.flexShrink = '0';
-          slot.style.display = 'inline-flex';
-          slot.style.alignItems = 'center';
-          if (slot === group) break;
-        }
-      }
-    } else button.appendChild(count);
+    count.style.cssText = 'display:block;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:.35em;font:inherit;color:inherit;white-space:nowrap';
+    // Legacy clients without a native component get a label below the icon.
+    if (!buttonStyles.has(button)) buttonStyles.set(button, button.getAttribute('style'));
+    button.style.position = 'relative';
+    button.appendChild(count);
   }
-  const text = formatCount(activeDislikes);
   if (count.textContent !== text) count.textContent = text;
-  setDiagnostic('dislikeDisplay', 'Count placed beside thumbs-down');
+  setDiagnostic('dislikeDisplay', 'Count below thumbs-down');
   if (!/dislike/i.test(button.getAttribute('aria-label') || '')) {
     button.setAttribute('aria-label', `Dislike, ${text}`);
   }
