@@ -1,105 +1,27 @@
 import { isOkActivationEvent } from '../utils/okKey.js';
 
 const BUTTON_ID = 'tt-refresh-button';
-const FOCUS_STATE_CLASSES = new Set([
-    'zylon-focus',
-    'focused',
-    'focus-visible',
-    'yt-focused',
-    'ytlr-focused'
-]);
-
-function copyVisualClasses(source, target) {
-    for (const className of source?.classList || []) {
-        if (!FOCUS_STATE_CLASSES.has(className)) target.classList.add(className);
-    }
-}
-
-function iconClassMap() {
-    return Object.values(window._yttv || {}).find(value =>
-        value instanceof Map && (value.has('REPLAY') || value.has('REFRESH'))
-    );
-}
-
-function replaceMicrophoneIcon(button) {
-    const icon = button.querySelector('yt-icon');
-    if (!icon) return;
-
-    const classes = iconClassMap();
-    const refreshClass = classes?.get('REPLAY') || classes?.get('REFRESH');
-    const microphoneClass = classes?.get('MICROPHONE_ON');
-    if (refreshClass) {
-        if (microphoneClass) icon.classList.remove(microphoneClass);
-        icon.classList.add(refreshClass);
-        return;
-    }
-
-    // Fallback for clients that do not expose YouTube's icon-class map.
-    icon.className = 'ytLrSearchVoiceMicButtonIcon tt-refresh-icon-fallback';
-    icon.textContent = '↻';
-}
-
-function createBareButton() {
-    const button = document.createElement('ytlr-search-voice');
-    button.classList.add('ytLrSearchVoiceHost', 'ytLrSearchBarSearchVoice');
-
-    const face = document.createElement('ytlr-search-voice-mic-button');
-    face.classList.add('ytLrSearchVoiceMicButtonHost', 'zylon-ve');
-    face.setAttribute('hybridnavfocusable', 'true');
-    face.setAttribute('tabindex', '-1');
-
-    const icon = document.createElement('yt-icon');
-    icon.classList.add('ytContribIconHost', 'ytLrSearchVoiceMicButtonIcon');
-    const classes = iconClassMap();
-    const refreshClass = classes?.get('REPLAY') || classes?.get('REFRESH');
-    if (refreshClass) icon.classList.add(refreshClass);
-    else {
-        icon.classList.add('tt-refresh-icon-fallback');
-        icon.textContent = '↻';
-    }
-
-    face.appendChild(icon);
-    button.appendChild(face);
-    return button;
-}
-
-function createButtonFromVoiceControl(voiceButton) {
-    const button = document.createElement('ytlr-search-voice');
-    copyVisualClasses(voiceButton, button);
-
-    const sourceFace = voiceButton.querySelector('ytlr-search-voice-mic-button');
-    const face = document.createElement('ytlr-search-voice-mic-button');
-    copyVisualClasses(sourceFace, face);
-    face.setAttribute('hybridnavfocusable', 'true');
-    face.setAttribute('tabindex', '-1');
-
-    const sourceIcon = sourceFace?.querySelector('yt-icon');
-    const icon = document.createElement('yt-icon');
-    copyVisualClasses(sourceIcon, icon);
-    icon.setAttribute('tabindex', '-1');
-
-    face.appendChild(icon);
-    button.appendChild(face);
-    return button;
-}
 
 function createRefreshButton(searchBar) {
-    const voiceButton = searchBar.querySelector('ytlr-search-voice');
-    // Do not clone the node itself: YouTube places transient zylon-focus state
-    // and navigation identity on it. Copying that state makes Search, microphone
-    // and Refresh appear focused at the same time.
-    const button = voiceButton ? createButtonFromVoiceControl(voiceButton) : createBareButton();
+    // A second ytlr-search-voice shares the microphone component's internal
+    // focus state. Use an ordinary hybrid-navigation button so YouTube sees a
+    // third, independent target beside the text box and microphone.
+    const button = document.createElement('button');
     button.id = BUTTON_ID;
+    button.type = 'button';
+    button.classList.add('tt-search-refresh-button', 'zylon-ve');
     button.setAttribute('idomkey', 'TizenTubeSearchRefresh');
+    button.setAttribute('hybridnavfocusable', 'true');
     button.setAttribute('tabindex', '0');
+    button.setAttribute('role', 'button');
     button.setAttribute('aria-label', 'Refresh');
     button.setAttribute('title', 'Refresh');
-    button.style.left = '10.25em';
 
-    const focusableChild = button.querySelector('ytlr-search-voice-mic-button');
-    focusableChild?.setAttribute('hybridnavfocusable', 'true');
-    focusableChild?.setAttribute('tabindex', '-1');
-    if (voiceButton) replaceMicrophoneIcon(button);
+    const icon = document.createElement('span');
+    icon.className = 'tt-search-refresh-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '↻';
+    button.appendChild(icon);
     searchBar.appendChild(button);
     return button;
 }
@@ -133,4 +55,4 @@ const observer = new MutationObserver(ensureRefreshButton);
 observer.observe(document.body, { childList: true, subtree: true });
 ensureRefreshButton();
 
-export { copyVisualClasses, createRefreshButton, refreshButtonHasFocus };
+export { createRefreshButton, refreshButtonHasFocus };

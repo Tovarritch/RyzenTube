@@ -156,11 +156,35 @@ div[idomkey="shadow"] {
     font-family: "YouTube Icons Outlined";
 }
 
-.tt-refresh-icon-fallback {
-    color: inherit;
+.tt-search-refresh-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 0;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.7);
+    display: block;
+    font-size: 3rem;
+    height: 1em;
+    left: 10.25em;
+    padding: 0;
+    pointer-events: auto;
+    position: absolute;
+    text-align: center;
+    top: 0;
+    width: 1em;
+}
+
+.tt-search-refresh-button:focus,
+.tt-search-refresh-button.zylon-focus,
+.tt-search-refresh-button[focused] {
+    background: #f1f1f1;
+    color: #0f0f0f;
+    outline: none;
+}
+
+.tt-search-refresh-icon {
+    display: block;
     font-family: sans-serif;
     font-size: .72em;
     font-weight: 400;
-    line-height: 1em;
-    margin-top: .2em;
+    line-height: 1.32em;
 }
