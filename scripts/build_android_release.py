@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repack the Android TV shell so it loads this repository's userscript.
+"""Repack the 32-bit ARM Android TV shell with this repository's userscript.
 
 The upstream Cobalt APK stores libchrobalt.so uncompressed and embeds the
 userscript URL as a fixed-size string. This script replaces that string while
@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 UPSTREAM_URL = b"https://cdn.jsdelivr.net/npm/@foxreis/tizentube/dist/userScript.js?v="
-RYZENTUBE_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/RyzenTube@r13/dist/userScript.js?ve="
+USERSCRIPT_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/RyzenTube@r13/dist/userScript.js?ve="
 
 
 def is_signature_file(name: str) -> bool:
@@ -42,13 +42,20 @@ def copy_info(source: zipfile.ZipInfo) -> zipfile.ZipInfo:
 
 
 def patch_apk(source_path: Path, output_path: Path) -> None:
-    if len(UPSTREAM_URL) != len(RYZENTUBE_URL):
+    if len(UPSTREAM_URL) != len(USERSCRIPT_URL):
         raise RuntimeError("Replacement URL must be the same byte length as the upstream URL")
 
     patched_libraries = 0
     with zipfile.ZipFile(source_path, "r") as source, zipfile.ZipFile(
         output_path, "w", allowZip64=True
     ) as output:
+        abis = {
+            entry.filename.split('/')[1]
+            for entry in source.infolist()
+            if entry.filename.startswith('lib/') and entry.filename.endswith('.so')
+        }
+        if abis != {'armeabi-v7a'}:
+            raise RuntimeError('Only 32-bit ARM (armeabi-v7a) Android TV APKs are supported')
         output.comment = source.comment
         for source_info in source.infolist():
             if is_signature_file(source_info.filename):
@@ -63,7 +70,7 @@ def patch_apk(source_path: Path, output_path: Path) -> None:
                     raise RuntimeError(
                         f"Expected one userscript URL in {source_info.filename}, found {occurrences}"
                     )
-                data = data.replace(UPSTREAM_URL, RYZENTUBE_URL)
+                data = data.replace(UPSTREAM_URL, USERSCRIPT_URL)
                 patched_libraries += 1
 
             output.writestr(copy_info(source_info), data)
