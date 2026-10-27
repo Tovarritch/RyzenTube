@@ -10,6 +10,16 @@ import { pipToFullscreen } from '../features/pictureInPicture.js';
 import getCommandExecutor from './customCommandExecution.js';
 import { t } from 'i18next';
 
+// Header controls exist before the player. Style them immediately instead of
+// waiting for a video element and the 250 ms player-initialization poll.
+const existingStyle = document.querySelector('style[nonce]');
+if (existingStyle) existingStyle.textContent += css;
+else {
+  const style = document.createElement('style');
+  style.textContent = css;
+  (document.head || document.documentElement).appendChild(style);
+}
+
 // It just works, okay?
 const interval = setInterval(() => {
   const videoElement = document.querySelector('video');
@@ -36,17 +46,6 @@ const keys = {
 };
 
 function execute_once_dom_loaded() {
-
-  // Add CSS to head.
-
-  const existingStyle = document.querySelector('style[nonce]');
-  if (existingStyle) {
-    existingStyle.textContent += css;
-  } else {
-    const style = document.createElement('style');
-    style.textContent = css;
-    document.head.appendChild(style);
-  }
 
   // Fix UI issues.
   const ui = configRead('enableFixedUI');

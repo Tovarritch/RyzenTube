@@ -21,10 +21,13 @@ test('Back resets native row selection, then feed selection, then resumes normal
             window.normalBack = 0;
             window.resets = [];
             for (const [id, layout, index] of [['horizontal', 'horizontal', 80], ['vertical', 'vertical', 100]]) {
-                document.getElementById(id).__instance = {
-                    props: { layout, selectedIndex: index },
-                    ga(index) { this.props.selectedIndex = index; window.resets.push(id); },
-                };
+                // Actual Cobalt method names differ from the desktop client.
+                class TvList {
+                    constructor() { this.props = { layout, selectedIndex: index }; }
+                    Z() { this.ea(0); }
+                    ea(index) { this.props.selectedIndex = index; window.resets.push(id); }
+                }
+                document.getElementById(id).__instance = new TvList();
             }
             document.addEventListener('keyup', event => {
                 if (event.key === 'Escape') window.normalBack++;

@@ -2,6 +2,9 @@ import { configRead } from '../config.js';
 import { setDiagnostic } from '../diagnostics.js';
 
 const API_URL = 'https://returnyoutubedislikeapi.com/Votes?videoId=';
+// The Android shell's loopback bridge fetches only this service, without
+// forwarding YouTube cookies. Direct fetch is blocked by YouTube's CSP there.
+const ANDROID_API_URL = 'http://127.0.0.1:18945/votes?videoId=';
 const DESCRIPTION_PANEL = 'video-description-ep-identifier';
 const MAX_CACHED = 200;
 const votesByVideo = new Map();
@@ -82,7 +85,8 @@ export function requestVotes(videoId) {
     let timeout;
     const responsePromise = new Promise((resolve, reject) => {
         timeout = setTimeout(() => reject(new Error('Service timed out after 15 seconds')), 15000);
-        Promise.resolve().then(() => fetch(`${API_URL}${encodeURIComponent(videoId)}`)).then(resolve, reject);
+        const endpoint = window.h5vcc?.tizentube ? ANDROID_API_URL : API_URL;
+        Promise.resolve().then(() => fetch(`${endpoint}${encodeURIComponent(videoId)}`)).then(resolve, reject);
     });
     const request = responsePromise
         .then(response => {

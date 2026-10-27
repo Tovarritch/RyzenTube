@@ -37,12 +37,26 @@ function listsFor(tile) {
         // Native yt-virtual-list keeps every item in props.items, including
         // those unmounted when scrolling a long distance.
         if (element.tagName.toLowerCase() === 'yt-virtual-list'
-            && props && Number.isInteger(props.selectedIndex) && props.selectedIndex > 0
-            && typeof instance.ga === 'function') {
-            lists.push({ instance, layout: props.layout });
+            && props && Number.isInteger(props.selectedIndex) && props.selectedIndex > 0) {
+            const reset = resetListAction(instance);
+            if (reset) lists.push({ reset, layout: props.layout });
         }
     }
     return lists;
+}
+
+// YouTube minifies this method differently on Cobalt and Chrome. Find the
+// native reset action by its implementation, rather than pinning a build's
+// private method name (r17's `ga` does not exist on the Sony TV client).
+function resetListAction(instance) {
+    const prototype = Object.getPrototypeOf(instance);
+    for (const name of Object.getOwnPropertyNames(prototype || {})) {
+        const fn = Object.getOwnPropertyDescriptor(prototype, name)?.value;
+        if (typeof fn !== 'function') continue;
+        const match = String(fn).match(/^[\w$]+\(\)\s*\{\s*this\.([\w$]+)\(0\);?\s*\}$/);
+        if (match && typeof instance[match[1]] === 'function') return () => fn.call(instance);
+    }
+    return null;
 }
 
 function handleBackToStart(event) {
@@ -71,7 +85,7 @@ function handleBackToStart(event) {
         setDiagnostic('back', `Normal Back (${event.keyCode}): at start or no list controller`);
         return;
     }
-    list.instance.ga(0);
+    list.reset();
     setDiagnostic('back', `${list.layout === 'horizontal' ? 'Row start' : 'Feed top'} requested (${event.keyCode})`);
     consumeBackRelease = true;
     event.preventDefault();

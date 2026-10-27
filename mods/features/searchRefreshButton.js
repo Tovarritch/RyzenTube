@@ -84,10 +84,15 @@ function createRefreshButton(searchBar) {
     button.setAttribute('aria-label', 'Refresh');
     button.setAttribute('title', 'Refresh');
 
-    const icon = document.createElement('span');
-    icon.className = 'tt-search-refresh-icon';
+    // Inline vector: no icon-font download, fallback font or layout delay.
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('class', 'tt-search-refresh-icon');
+    icon.setAttribute('viewBox', '0 0 24 24');
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '↻';
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('d', 'M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.1A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z');
+    icon.appendChild(path);
     button.appendChild(icon);
     button.addEventListener('blur', () => clearRefreshSelection(button));
     searchBar.appendChild(button);

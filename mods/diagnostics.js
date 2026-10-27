@@ -11,5 +11,9 @@ export const diagnostics = {
 };
 
 export function setDiagnostic(key, value) {
+    // ADB troubleshooting without exposing video IDs, titles or account data.
+    if (diagnostics[key] !== value && ['back', 'dislikeRequest', 'dislikeDisplay'].includes(key)) {
+        console.info(`TizenTube ${key}: ${value}`);
+    }
     diagnostics[key] = value;
 }

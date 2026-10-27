@@ -23,9 +23,27 @@ const {
 } = await import('../features/returnYoutubeDislike.js');
 
 beforeEach(() => {
+    delete window.h5vcc;
     configWrite('hideMembersOnlyVideos', false);
     configWrite('enableStopForcedSubtitles', false);
     configWrite('enableReturnYoutubeDislike', false);
+});
+
+test('Android uses the scoped native bridge and opt-out prevents bridge requests', async () => {
+    window.h5vcc = { tizentube: {} };
+    let requests = [];
+    globalThis.fetch = async url => {
+        requests.push(url);
+        return { ok: true, json: async () => ({ dislikes: 17 }) };
+    };
+    assert.equal(await requestVotes('abcdefghijk'), null);
+    assert.deepEqual(requests, []);
+    configWrite('enableReturnYoutubeDislike', true);
+    assert.equal((await requestVotes('abcdefghijk')).dislikes, 17);
+    assert.deepEqual(requests, ['http://127.0.0.1:18945/votes?videoId=abcdefghijk']);
+    configWrite('enableReturnYoutubeDislike', false);
+    assert.equal(await requestVotes('abcdefghijk'), null);
+    assert.equal(requests.length, 1);
 });
 
 test('privacy-sensitive and filtering features default to off', () => {

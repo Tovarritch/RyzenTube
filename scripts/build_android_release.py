@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 UPSTREAM_URL = b"https://cdn.jsdelivr.net/npm/@foxreis/tizentube/dist/userScript.js?v="
-USERSCRIPT_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/RyzenTube@r17/dist/userScript.js?ve="
+USERSCRIPT_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/RyzenTube@r18/dist/userScript.js?ve="
 
 
 def is_signature_file(name: str) -> bool:
@@ -56,6 +56,9 @@ def patch_apk(source_path: Path, output_path: Path) -> None:
         }
         if abis != {'armeabi-v7a'}:
             raise RuntimeError('Only 32-bit ARM (armeabi-v7a) Android TV APKs are supported')
+        if not any(b'returnyoutubedislikeapi.com' in source.read(entry)
+                   for entry in source.namelist() if entry.endswith('.dex')):
+            raise RuntimeError('Missing dislike bridge; run prepare_android_shell.py first')
         output.comment = source.comment
         for source_info in source.infolist():
             if is_signature_file(source_info.filename):

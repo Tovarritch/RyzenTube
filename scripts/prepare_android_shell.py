@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""Add the loopback RYD bridge to the official ARM shell before release repacking.
+
+Requires a JDK, Apktool, Android SDK build-tools and an Android platform jar.
+This does not add debugging hooks or change the package ID/signing identity.
+"""
+import argparse
+import os
+from pathlib import Path
+import re
+import subprocess
+import zipfile
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    for name in ('source', 'output', 'work_dir', 'jdk', 'apktool', 'build_tools', 'android_jar'):
+        parser.add_argument('--' + name.replace('_', '-'), type=Path, required=True)
+    args = parser.parse_args()
+    with zipfile.ZipFile(args.source) as apk:
+        abis = {p.split('/')[1] for p in apk.namelist() if p.startswith('lib/') and p.endswith('.so')}
+        if abis != {'armeabi-v7a'}:
+            raise ValueError('Only armeabi-v7a is supported')
+    args.work_dir.mkdir(parents=True, exist_ok=False)
+    java = args.jdk / 'bin' / ('java.exe' if os.name == 'nt' else 'java')
+    javac = args.jdk / 'bin' / ('javac.exe' if os.name == 'nt' else 'javac')
+    env = dict(os.environ, JAVA_HOME=str(args.jdk))
+    def run(*cmd):
+        subprocess.run([str(x) for x in cmd], check=True, env=env)
+    shell = args.work_dir / 'shell'
+    run(java, '-jar', args.apktool, 'd', args.source, '-o', shell)
+    activities = list(shell.glob('smali*/dev/cobalt/app/MainActivity.smali'))
+    if len(activities) != 1:
+        raise ValueError('Expected one MainActivity')
+    activity = activities[0]
+    source = activity.read_text(encoding='utf-8')
+    original = '    invoke-direct {p0}, Ldev/cobalt/coat/CobaltActivity;-><init>()V'
+    if source.count(original) != 1:
+        raise ValueError('Unrecognized MainActivity constructor')
+    activity.write_text(source.replace(original, original +
+        '\n\n    invoke-static {}, Lapp/tizentube/DislikeService;->start()V'), encoding='utf-8')
+    classes = args.work_dir / 'classes'
+    dex = args.work_dir / 'dex'
+    classes.mkdir()
+    dex.mkdir()
+    bridge = Path(__file__).resolve().parents[1] / 'android' / 'DislikeService.java'
+    run(javac, '--release', '8', '-d', classes, bridge)
+    # Calling D8's jar avoids shell/batch quoting differences on Windows.
+    run(java, '-cp', args.build_tools / 'lib' / 'd8.jar', 'com.android.tools.r8.D8',
+        '--min-api', '21', '--lib', args.android_jar, '--output', dex, *classes.rglob('*.class'))
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    run(java, '-jar', args.apktool, 'b', shell, '-o', args.output)
+    with zipfile.ZipFile(args.output, 'a') as apk:
+        numbers = [int(m.group(1) or 1) for p in apk.namelist()
+                   if (m := re.fullmatch(r'classes(\d*)\.dex', p))]
+        apk.write(dex / 'classes.dex', f'classes{max(numbers) + 1}.dex', zipfile.ZIP_DEFLATED)
+
+
+if __name__ == '__main__':
+    main()
