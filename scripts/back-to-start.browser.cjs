@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { resolve } = require('node:path');
+const { readFileSync } = require('node:fs');
 const { test } = require('node:test');
 const { chromium } = require('playwright');
 
@@ -10,12 +11,13 @@ test('Back resets native row selection, then feed selection, then resumes normal
         await page.setContent(`
             <yt-virtual-list id="vertical">
                 <yt-virtual-list id="horizontal">
-                    <ytlr-tile-renderer><button id="tile">Video</button></ytlr-tile-renderer>
+                    <yt-lockup-view-model><button id="tile">Video</button></yt-lockup-view-model>
                 </yt-virtual-list>
             </yt-virtual-list>
             <div role="dialog"><ytlr-tile-renderer><button id="dialog">Dialog</button></ytlr-tile-renderer></div>
         `);
         await page.evaluate(() => {
+            window.setDiagnostic = () => {};
             window.normalBack = 0;
             window.resets = [];
             for (const [id, layout, index] of [['horizontal', 'horizontal', 80], ['vertical', 'vertical', 100]]) {
@@ -28,7 +30,7 @@ test('Back resets native row selection, then feed selection, then resumes normal
                 if (event.key === 'Escape') window.normalBack++;
             });
         });
-        await page.addScriptTag({ path: resolve(__dirname, '../mods/features/backToStart.js') });
+        await page.addScriptTag({ content: readFileSync(resolve(__dirname, '../mods/features/backToStart.js'), 'utf8').replace(/^import .*;\r?\n/gm, '') });
         await page.locator('#tile').focus();
         await page.keyboard.press('Escape');
         assert.deepEqual(await page.evaluate(() => window.resets), ['horizontal']);

@@ -24,7 +24,9 @@ the code does not install app updates automatically.
 
 ## Publishing
 
-1. Build the userscript and commit `dist/userScript.js`.
+1. Set `BUILD_LABEL` in `mods/buildInfo.js` to the new tag, build the userscript
+   and commit `dist/userScript.js`. Check that the production bundle completes
+   initialization (`window.tizenTubeBuild`) with missing YouTube storage.
 2. Pin `USERSCRIPT_URL` in `scripts/build_android_release.py` to the new tag.
 3. Repack only the official 32-bit ARM shell, align it and sign it with the
    existing release key. The repacker rejects ARM64 APKs.

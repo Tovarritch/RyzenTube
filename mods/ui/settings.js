@@ -1,4 +1,6 @@
 import { configRead } from '../config.js';
+import { BUILD_LABEL } from '../buildInfo.js';
+import { diagnostics } from '../diagnostics.js';
 import { showModal, buttonItem, overlayPanelItemListRenderer, scrollPaneRenderer, overlayMessageRenderer, QrCodeRenderer } from './ytUI.js';
 import qrcode from 'qrcode-npm';
 import { t } from 'i18next';
@@ -8,6 +10,21 @@ const qrcodes = {};
 
 export default function modernUI(update, parameters) {
     const settings = [
+        {
+            name: 'Diagnostics',
+            icon: 'INFO',
+            value: null,
+            options: {
+                title: `TizenTube ${BUILD_LABEL}`,
+                subtitle: 'Local status. Nothing is uploaded.',
+                content: scrollPaneRenderer([
+                    overlayMessageRenderer(`Startup: ${diagnostics.initialized ? 'Complete' : 'Incomplete'}`),
+                    overlayMessageRenderer(`Dislike service: ${diagnostics.dislikeRequest}`),
+                    overlayMessageRenderer(`Dislike display: ${diagnostics.dislikeDisplay}`),
+                    overlayMessageRenderer(`Back: ${diagnostics.back}`),
+                ]),
+            },
+        },
         {
             name: t('settings.supportTT.title'),
             icon: 'MONEY_HEART',
@@ -927,7 +944,7 @@ export default function modernUI(update, parameters) {
     showModal(
         {
             title: t('settings.ttSettings.title'),
-            subtitle: t('settings.ttSettings.madeByText')
+            subtitle: `TizenTube ${BUILD_LABEL} · ${t('settings.ttSettings.madeByText')}`
         },
         overlayPanelItemListRenderer(buttons, parameters && parameters.length > 0 ? parameters[0] : 0),
         'tt-settings',

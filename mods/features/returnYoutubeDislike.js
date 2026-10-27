@@ -1,4 +1,5 @@
 import { configRead } from '../config.js';
+import { setDiagnostic } from '../diagnostics.js';
 
 const API_URL = 'https://returnyoutubedislikeapi.com/Votes?videoId=';
 const DESCRIPTION_PANEL = 'video-description-ep-identifier';
@@ -77,7 +78,13 @@ export function requestVotes(videoId) {
     if (!isReturnYoutubeDislikeEnabled() || !videoId) return Promise.resolve(null);
     if (votesByVideo.has(videoId)) return Promise.resolve(votesByVideo.get(videoId));
     if (inFlight.has(videoId)) return inFlight.get(videoId);
-    const request = fetch(`${API_URL}${encodeURIComponent(videoId)}`)
+    setDiagnostic('dislikeRequest', 'Contacting Return YouTube Dislike');
+    let timeout;
+    const responsePromise = new Promise((resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error('Service timed out after 15 seconds')), 15000);
+        Promise.resolve().then(() => fetch(`${API_URL}${encodeURIComponent(videoId)}`)).then(resolve, reject);
+    });
+    const request = responsePromise
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
@@ -85,14 +92,17 @@ export function requestVotes(videoId) {
         .then(votes => {
             if (!Number.isFinite(votes?.dislikes) || votes.dislikes < 0) throw new Error('Invalid dislike count');
             remember(videoId, votes);
+            setDiagnostic('dislikeRequest', `Received ${votes.dislikes} dislikes`);
             window.dispatchEvent?.(new CustomEvent('tt-dislike-votes', { detail: { videoId, dislikes: votes.dislikes } }));
             return votes;
         })
         .catch(error => {
+            setDiagnostic('dislikeRequest', `Failed: ${error.message || String(error)}`);
             console.warn('TizenTube: Return YouTube Dislike request failed:', error);
             return null;
         })
         .then(votes => {
+            clearTimeout(timeout);
             inFlight.delete(videoId);
             return votes;
         });

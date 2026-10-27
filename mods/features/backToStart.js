@@ -1,6 +1,8 @@
 // Back resets the native virtual list selection, letting YouTube update both
 // focus and scroll position. DOM scrollTo alone cannot move its virtual lists.
+import { setDiagnostic } from '../diagnostics.js';
 let consumeBackRelease = false;
+const TILE_SELECTOR = 'ytlr-tile-renderer, yt-lockup-view-model, ytlr-lockup-view-model, ytlr-compact-video-renderer, [role="gridcell"]';
 
 function isBack(event) {
     return ['Escape', 'Backspace', 'BrowserBack', 'GoBack'].includes(event.key)
@@ -9,11 +11,22 @@ function isBack(event) {
 
 function feedTarget(event) {
     if (/^#?\/?(?:watch|shorts)(?:[/?]|$)/.test(window.location.hash)) return null;
-    const target = document.activeElement !== document.body ? document.activeElement
-        : document.querySelector('.zylon-focus') || event.target;
+    const excluded = 'input, textarea, [contenteditable="true"], [role="dialog"], ytlr-overlay-panel-renderer, ytlr-overlay-section-renderer';
+    for (const node of [event.target, document.activeElement]) {
+        if (node instanceof Element && node.closest(excluded)) return null;
+    }
+    // .zylon-focus is on every ancestor of the selected tile. The first match
+    // is the whole app, so start with the real key target/active element and
+    // otherwise use the deepest focused video tile.
+    let target = event.target instanceof Element && event.target.closest(TILE_SELECTOR) ? event.target
+        : document.activeElement;
+    if (!target?.closest?.(TILE_SELECTOR)) {
+        const focused = Array.from(document.querySelectorAll('.zylon-focus'));
+        target = focused.reverse().find(element => element.closest(TILE_SELECTOR)) || target;
+    }
     if (!(target instanceof Element)) return null;
-    if (target.closest('input, textarea, [contenteditable="true"], [role="dialog"], ytlr-overlay-panel-renderer, ytlr-overlay-section-renderer')) return null;
-    return target.closest('ytlr-tile-renderer, ytlr-lockup-view-model, ytlr-compact-video-renderer, [role="gridcell"]');
+    if (target.closest(excluded)) return null;
+    return target.closest(TILE_SELECTOR);
 }
 
 function listsFor(tile) {
@@ -47,12 +60,19 @@ function handleBackToStart(event) {
         return;
     }
     const tile = feedTarget(event);
-    if (!tile) return;
+    if (!tile) {
+        setDiagnostic('back', `Normal Back (${event.keyCode}): outside a video feed`);
+        return;
+    }
     const lists = listsFor(tile);
     const list = lists.find(item => item.layout === 'horizontal')
         || lists.find(item => item.layout === 'vertical');
-    if (!list) return;
+    if (!list) {
+        setDiagnostic('back', `Normal Back (${event.keyCode}): at start or no list controller`);
+        return;
+    }
     list.instance.ga(0);
+    setDiagnostic('back', `${list.layout === 'horizontal' ? 'Row start' : 'Feed top'} requested (${event.keyCode})`);
     consumeBackRelease = true;
     event.preventDefault();
     event.stopImmediatePropagation();

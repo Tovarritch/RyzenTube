@@ -1,4 +1,6 @@
 import initPatches from "./features/standaloneUserscript.js";
+import { BUILD_LABEL } from './buildInfo.js';
+import { setDiagnostic } from './diagnostics.js';
 if (window.location.hostname === 'localhost') {
     initPatches();
 }
@@ -29,3 +31,7 @@ import "./ui/customUI.js";
 import "./ui/customGuideAction.js";
 import "./features/autoFrameRate.js";
 import "./ui/clock.js";
+
+// This is set only after every imported feature has initialized successfully.
+window.tizenTubeBuild = BUILD_LABEL;
+setDiagnostic('initialized', true);

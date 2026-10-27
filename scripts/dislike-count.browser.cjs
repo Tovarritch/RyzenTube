@@ -14,6 +14,7 @@ test('late dislike response updates TV icons and description, respects opt-out a
             <ytlr-video-description-header-renderer></ytlr-video-description-header-renderer>
         `);
         await page.evaluate(() => {
+            window.setDiagnostic = () => {};
             window.optIn = false;
             window.configRead = () => window.optIn;
             window.configChangeEmitter = new EventTarget();
@@ -60,20 +61,24 @@ test('late dislike response updates TV icons and description, respects opt-out a
         // native component model that must be forced to render after editing.
         await page.evaluate(() => {
             const host = document.querySelector('ytlr-like-button-renderer');
-            host.innerHTML = '<div class="rNIdJc"><span class="zn4D2"></span></div>';
+            host.innerHTML = '<yt-icon-button idomkey="dislike-button"><yt-button-container idomkey="dislike-button" role="button"><div style="width:2.5rem"><yt-button-graphic><yt-icon></yt-icon></yt-button-graphic></div></yt-button-container></yt-icon-button>';
             host.__instance = {
                 props: { data: {} },
                 K() { throw new Error('Must use force-render for unchanged state'); },
                 Fa() {
-                    host.querySelector('span').textContent = this.props.data.dislikeCountText?.simpleText || '';
+                    // The real icon-only shape updates accessibility but does
+                    // not draw the title from dislikeCountText.
+                    host.querySelector('[role="button"]').setAttribute('aria-label', this.props.data.dislikeCountText?.simpleText || '');
                 },
             };
             window.toggle(true);
         });
-        await page.waitForFunction(() => document.querySelector('.zn4D2').textContent === '99');
-        assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Native title must not have an extra appended count');
+        await page.waitForFunction(() => document.getElementById('tt-dislike-count')?.textContent === '99');
+        assert.equal(await page.locator('yt-button-container > div > #tt-dislike-count').count(), 1, 'Icon-only native shape must get a visible inline number');
+        assert.equal(await page.locator('yt-button-container > div').evaluate(element => element.style.width), 'auto');
         await page.evaluate(() => window.toggle(false));
-        assert.equal(await page.locator('.zn4D2').innerText(), '', 'Opt-out restores the original native title');
+        assert.equal(await page.locator('#tt-dislike-count').count(), 0, 'Opt-out removes the inline count');
+        assert.equal(await page.locator('yt-button-container > div').evaluate(element => element.style.width), '2.5rem');
     } finally {
         await browser.close();
     }

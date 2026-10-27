@@ -82,10 +82,12 @@ const defaultConfig = {
 let localConfig;
 
 try {
-  localConfig = JSON.parse(window.localStorage[CONFIG_KEY]);
+  const raw = window.localStorage[CONFIG_KEY];
+  localConfig = raw ? JSON.parse(raw) : {};
+  if (!localConfig || typeof localConfig !== 'object' || Array.isArray(localConfig)) localConfig = {};
 } catch (err) {
   console.warn('Config read failed:', err);
-  localConfig = defaultConfig;
+  localConfig = {};
 }
 
 export function configRead(key) {
