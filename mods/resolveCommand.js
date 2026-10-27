@@ -9,7 +9,6 @@ import { requestNextAndNavigateChannel, getFeedbackPanelTokens, sendFeedbackToke
 import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
-import { hideSelectedFeedItem, hideChannelFeedItems } from './utils/feedDom.js';
 
 export default function resolveCommand(cmd, _) {
     // resolveCommand function is pretty OP, it can do from opening modals, changing client settings and way more.
@@ -268,17 +267,14 @@ function customAction(action, parameters) {
             break;
         case 'NOT_INTERESTED':
             hideVideoLocally(parameters.videoId);
-            hideSelectedFeedItem(parameters.videoId);
             if (parameters.panel) markFeedback(parameters.panel, 0, false);
             showToast('TizenTube', t('toasts.videoHidden'));
             dismissVideoMenu();
             break;
         case 'DONT_RECOMMEND_CHANNEL':
-            // Keep a local block as well as YouTube's account-level feedback so
-            // visible tiles disappear immediately and future responses stay filtered.
+            // Filter future feed responses; leave the current rendered layout
+            // alone until refresh so YouTube can position the remaining tiles.
             if (parameters.channel) blockChannel(parameters.channel);
-            hideSelectedFeedItem();
-            hideChannelFeedItems(parameters.channel);
             if (parameters.panel) {
                 markFeedback(parameters.panel, 1, false);
                 showToast('TizenTube', t('toasts.channelNotRecommended'));
@@ -293,8 +289,6 @@ function customAction(action, parameters) {
             break;
         case 'BLOCK_CHANNEL':
             blockChannel(parameters);
-            hideSelectedFeedItem();
-            hideChannelFeedItems(parameters);
             showToast('TizenTube', t('toasts.channelBlocked', { name: parameters.name || parameters.id }));
             dismissVideoMenu();
             break;
