@@ -17,10 +17,14 @@ function handleHomeKey(event) {
   if (event.type === 'keydown' && !consuming && focusedHome(event)) {
     if (event.repeat) return;
     consuming = true;
+    event.preventDefault();
+    event.stopImmediatePropagation();
     try { window.sessionStorage.setItem('tt-explicit-home-refresh', '1'); } catch (_) {}
-    // Boot YouTube on Home, including when Home was selected from Library.
-    window.location.hash = '#/';
-    window.location.reload();
+    // Let the key dispatch finish before reloading. A same-document hash
+    // navigation followed immediately by reload can cancel the reload in Cobalt.
+    const navigate = window.location.hash !== '#/';
+    if (navigate) window.location.hash = '#/';
+    setTimeout(() => window.location.reload(), navigate ? 250 : 50);
   }
   if (!consuming) return;
   event.preventDefault();
