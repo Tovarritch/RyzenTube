@@ -80,18 +80,6 @@ export function patchResolveCommand() {
                 } else if (cmd?.playlistEditEndpoint?.customAction) {
                     customAction(cmd.playlistEditEndpoint.customAction.action, cmd.playlistEditEndpoint.customAction.parameters);
                     return true;
-                } else if (isHomeNavigationCommand(cmd)) {
-                    // YouTube treats selecting an already-selected Home entry as a no-op.
-                    // Navigate first when necessary, then force a real page reload so the
-                    // recommendation request cannot be satisfied from the current view.
-                    const alreadyHome = isHomePage();
-                    const result = alreadyHome ? true : ogResolve.call(this, cmd, _);
-                    setTimeout(() => ogResolve.call(this, {
-                        signalAction: {
-                            signal: 'RELOAD_PAGE'
-                        }
-                    }, _), alreadyHome ? 0 : 500);
-                    return result;
                 } else if (cmd?.openPopupAction?.uniqueId === 'playback-settings') {
                     // Patch the playback settings popup to use TizenTube speed settings
                     const items = cmd.openPopupAction.popup.overlaySectionRenderer.overlay.overlayTwoPanelRenderer.actionPanel.overlayPanelRenderer.content.overlayPanelItemListRenderer.items;
@@ -357,22 +345,6 @@ function customAction(action, parameters) {
             window.screenTurnedOffAt = Date.now();
             break;
     }
-}
-
-const HOME_BROWSE_IDS = new Set(['FEwhat_to_watch', 'FEhome']);
-
-function isHomeNavigationCommand(command) {
-    const endpoint = command?.browseEndpoint;
-    const url = command?.commandMetadata?.webCommandMetadata?.url;
-    return HOME_BROWSE_IDS.has(endpoint?.browseId)
-        || endpoint?.canonicalBaseUrl === '/'
-        || url === '/';
-}
-
-function isHomePage() {
-    const hash = window.location?.hash ?? '';
-    return hash === '' || hash === '#/' || hash === '#/browse'
-        || [...HOME_BROWSE_IDS].some((browseId) => hash.includes(browseId));
 }
 
 function dismissVideoMenu() {

@@ -57,7 +57,21 @@ override the port with the `TIZENTUBE_DEV_PORT` environment variable.
 
 - **Back to start:** While browsing video tiles, press Back to return to the start
   of a row. Press Back again to return to the top of the feed. Back works normally
-  once at the start, and while watching videos or using pop-ups.
+  once at the start and in pop-ups.
+- **Refresh Home:** Press OK on the Home sidebar entry to load a fresh feed.
+- **Player exit confirmation:** The first Back displays a reminder; press Back
+  again within two seconds to leave playback. Available in Video Player Settings.
+- **Instant Seek:** Hold Left/Right on the seek bar and release to commit without
+  pressing OK. Set the delay from 250 to 1500 ms in Video Player Settings.
+- **Original video language:** Keep creator titles from YouTube's original
+  metadata and prefer the original audio track. Later manual audio choices are
+  preserved. These options are in Video Player Settings and original titles take
+  priority over DeArrow titles.
+- **Player button visibility:** Player UI patching can hide Previous/Next and Join.
+- **Library tab visibility:** Select individual tabs to hide in User Interface
+  Settings, then refresh Library.
+- **Long-press preferences:** In Miscellaneous Settings, choose which TizenTube
+  actions appear and their order. YouTube's own entries are preserved.
 
 - 📺 **Picture-in-Picture Mode**
 - 🛑 **Ad Blocker**: Enjoy your favourite streaming website without interruptions from ads.

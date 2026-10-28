@@ -8,8 +8,8 @@ function focusedHome(event) {
   const props = entry.__instance?.props;
   const data = props?.data?.guideEntryRenderer || props?.data || props?.guideEntryRenderer || props;
   const id = data?.navigationEndpoint?.browseEndpoint?.browseId;
-  return ['FEwhat_to_watch', 'FEhome'].includes(id)
-    || data?.icon?.iconType === 'HOME' || data?.icon === 'HOME'
+  return ['FEtopics', 'FEwhat_to_watch', 'FEhome'].includes(id)
+    || ['HOME', 'WHAT_TO_WATCH'].includes(data?.icon?.iconType) || data?.icon === 'HOME'
     || entry.querySelector('[icon="HOME"], [icon-type="HOME"]') !== null;
 }
 function handleHomeKey(event) {
@@ -17,6 +17,7 @@ function handleHomeKey(event) {
   if (event.type === 'keydown' && !consuming && focusedHome(event)) {
     if (event.repeat) return;
     consuming = true;
+    try { window.sessionStorage.setItem('tt-explicit-home-refresh', '1'); } catch (_) {}
     // Boot YouTube on Home, including when Home was selected from Library.
     window.location.hash = '#/';
     window.location.reload();
