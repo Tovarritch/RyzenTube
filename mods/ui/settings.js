@@ -1,109 +1,13 @@
 import { configRead } from '../config.js';
 import { BUILD_LABEL } from '../buildInfo.js';
 import { diagnostics } from '../diagnostics.js';
-import { showModal, buttonItem, overlayPanelItemListRenderer, scrollPaneRenderer, overlayMessageRenderer, QrCodeRenderer } from './ytUI.js';
-import qrcode from 'qrcode-npm';
+import { showModal, buttonItem, overlayPanelItemListRenderer, scrollPaneRenderer, overlayMessageRenderer } from './ytUI.js';
 import { t } from 'i18next';
 import resolveCommand from '../resolveCommand.js';
-
-const qrcodes = {};
+import { LIBRARY_TABS } from '../features/libraryTabHider.js';
 
 export default function modernUI(update, parameters) {
     const settings = [
-        {
-            name: 'Diagnostics',
-            icon: 'INFO',
-            value: null,
-            options: {
-                title: `TizenTube ${BUILD_LABEL}`,
-                subtitle: 'Local status. Nothing is uploaded.',
-                content: scrollPaneRenderer([
-                    overlayMessageRenderer(`Startup: ${diagnostics.initialized ? 'Complete' : 'Incomplete'}`),
-                    overlayMessageRenderer(`Dislike service: ${diagnostics.dislikeRequest}`),
-                    overlayMessageRenderer(`Dislike display: ${diagnostics.dislikeDisplay}`),
-                    overlayMessageRenderer(`Back: ${diagnostics.back}`),
-                ]),
-            },
-        },
-        {
-            name: t('settings.supportTT.title'),
-            icon: 'MONEY_HEART',
-            value: null,
-            options: {
-                title: t('settings.supportTT.title'),
-                subtitle: t('settings.supportTT.subtitle'),
-                content: scrollPaneRenderer([
-                    overlayMessageRenderer(t('settings.supportTT.content.1')),
-                    overlayMessageRenderer(t('settings.supportTT.content.2')),
-                    overlayMessageRenderer(t('settings.supportTT.content.3')),
-                    overlayMessageRenderer(t('settings.supportTT.content.4')),
-                    overlayMessageRenderer(t('settings.supportTT.content.5')),
-                    overlayMessageRenderer(t('settings.supportTT.content.6'))
-                ])
-            }
-        },
-        {
-            name: t('settings.options.socialMedia.title'),
-            icon: 'PRIVACY_UNLISTED',
-            value: null,
-            options: [
-                {
-                    name: 'GitHub',
-                    link: 'https://github.com/reisxd/TizenTube',
-                },
-                {
-                    name: 'YouTube',
-                    link: 'https://www.youtube.com/@tizenbrew',
-                },
-                {
-                    name: 'Discord',
-                    link: 'https://discord.gg/m2P7v8Y2qR',
-                },
-                {
-                    name: `Telegram (${t('settings.options.socialMedia.announcements')})`,
-                    link: 'https://t.me/tizentubecobaltofficial',
-                },
-                {
-                    name: `Telegram (${t('settings.options.socialMedia.group')})`,
-                    link: 'https://t.me/tizentubeofficial',
-                },
-                {
-                    name: t('settings.options.socialMedia.website'),
-                    link: 'https://tizentube.6513006.xyz',
-                },
-                {
-                    name: 'Buy Me A Coffee',
-                    link: 'https://www.buymeacoffee.com/reisxd',
-                },
-                {
-                    name: t('settings.options.socialMedia.githubSponsors'),
-                    link: 'https://github.com/sponsors/reisxd',
-                }
-            ].map((option) => {
-                if (!qrcodes[option.name]) {
-                    const qr = qrcode.qrcode(6, 'H');
-                    qr.addData(option.link);
-                    qr.make();
-
-                    const qrDataImgTag = qr.createImgTag(8, 8);
-                    const qrDataUrl = qrDataImgTag.match(/src="([^"]+)"/)[1];
-                    qrcodes[option.name] = qrDataUrl;
-                }
-                return {
-                    name: option.name,
-                    icon: 'OPEN_IN_NEW',
-                    value: null,
-                    options: {
-                        title: option.name,
-                        subtitle: option.link,
-                        content: overlayPanelItemListRenderer([
-                            overlayMessageRenderer(t('settings.options.socialMedia.qrCodeScanMessage', { name: option.name })),
-                            QrCodeRenderer(qrcodes[option.name])
-                        ])
-                    }
-                }
-            })
-        },
         {
             name: t('settings.options.adBlock'),
             icon: 'DOLLAR_SIGN',
@@ -302,6 +206,10 @@ export default function modernUI(update, parameters) {
                     name: t('settings.options.misc.options.longPress'),
                     value: 'enableLongPress'
                 },
+                ...[
+                    ['Long Press Menu Entries', 'visibility'], ['Sort Long Press Menu', 'order']
+                ].map(([name, action]) => ({ name, value: null,
+                    action: { customAction: { action: 'TT_MENU_PREFERENCES', parameters: { action } } } })),
                 {
                     name: t('settings.options.misc.options.shorts'),
                     icon: 'YOUTUBE_SHORTS_FILL_24',
@@ -374,6 +282,9 @@ export default function modernUI(update, parameters) {
                             value: 'enablePreviousNextButtons'
                         },
                         {
+                            name: 'Hide Join button', icon: 'VISIBILITY_OFF', value: 'hidePlayerJoinButton'
+                        },
+                        {
                             name: t('settings.options.videoPlayer.options.patching.options.showSuperThxBtn'),
                             icon: 'MONEY_HEART',
                             value: 'enableSuperThanksButton'
@@ -398,6 +309,23 @@ export default function modernUI(update, parameters) {
                             icon: 'CLEAR_COOKIES',
                             value: 'enableSwapMPWithPIP'
                         }
+                    ]
+                },
+                {
+                    name: 'Instant Seek', value: null, menuId: 'tt-instant-seek',
+                    menuHeader: { title: 'Instant Seek', subtitle: 'Hold Left or Right on the seek bar. Seeking commits after you release the button.' },
+                    options: [
+                        { name: 'Enable Instant Seek', value: 'enableInstantSeek' },
+                        { name: 'Seek commit delay', value: null, menuId: 'tt-instant-seek-delay',
+                          options: [250, 500, 750, 1000, 1250, 1500].map(value => ({ name: `${value} ms`, key: 'instantSeekDelayMs', value })) },
+                    ]
+                },
+                {
+                    name: 'Original video language', value: null, menuId: 'tt-original-language',
+                    menuHeader: { title: 'Original video language', subtitle: 'Use the creator’s titles and original audio. Audio can still be changed manually.' },
+                    options: [
+                        { name: 'Keep original titles', subtitle: 'Fetches original titles from YouTube. Takes priority over DeArrow titles.', value: 'enableOriginalTitles' },
+                        { name: 'Prefer original audio', value: 'enableOriginalAudio' },
                     ]
                 },
                 {
@@ -524,6 +452,12 @@ export default function modernUI(update, parameters) {
                         }))
                     };
                 })(),
+                {
+                    name: 'Library Tabs Buttons to Hide', value: null,
+                    menuId: 'tt-library-tabs', arrayToEdit: 'hiddenLibraryTabIds',
+                    menuHeader: { title: 'Library Tabs Buttons to Hide', subtitle: 'Selected tabs are hidden after refreshing Library.' },
+                    options: LIBRARY_TABS.map(([value, name]) => ({ name, value })),
+                },
                 {
                     name: t('settings.options.uiSettings.options.hiddenVideos.title'),
                     icon: 'VISIBILITY_OFF',
@@ -853,6 +787,21 @@ export default function modernUI(update, parameters) {
                     icon: 'STAR',
                 }
             ]
+        },
+        {
+            name: 'Diagnostics',
+            icon: 'INFO',
+            value: null,
+            options: {
+                title: `TizenTube ${BUILD_LABEL}`,
+                subtitle: 'Local status. Nothing is uploaded.',
+                content: scrollPaneRenderer([
+                    overlayMessageRenderer(`Startup: ${diagnostics.initialized ? 'Complete' : 'Incomplete'}`),
+                    overlayMessageRenderer(`Dislike service: ${diagnostics.dislikeRequest}`),
+                    overlayMessageRenderer(`Dislike display: ${diagnostics.dislikeDisplay}`),
+                    overlayMessageRenderer(`Back: ${diagnostics.back}`),
+                ]),
+            },
         },
         window.h5vcc && window.h5vcc.tizentube ?
             {

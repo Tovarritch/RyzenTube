@@ -192,6 +192,7 @@ ytlr-search-bar.tt-refresh-selected ytlr-search-voice-mic-button {
 ytlr-search-bar.tt-refresh-selected ytlr-search-text-box {
     background-color: #272727 !important;
     color: #f1f1f1 !important;
+    border-radius: 999px !important;
 }
 ytlr-search-bar.tt-refresh-selected ytlr-search-text-box * {
     color: #f1f1f1 !important;
@@ -201,6 +202,7 @@ ytlr-search-bar.tt-refresh-selected ytlr-search-text-box * {
 ytlr-search-bar.tt-refresh-selected ytlr-search-text-box > *,
 ytlr-search-bar.tt-refresh-selected ytlr-search-text-box .zylon-focus {
     background-color: #272727 !important;
+    border-radius: 999px !important;
 }
 
 .tt-search-refresh-icon {

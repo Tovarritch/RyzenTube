@@ -8,6 +8,7 @@ import { t } from 'i18next';
 import { requestNextAndNavigateChannel, getFeedbackPanelTokens, sendFeedbackToken } from './utils/innerTubeCalls.js';
 import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
+import { showMenuPreferences } from './ui/longPressPreferences.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 
 export default function resolveCommand(cmd, _) {
@@ -210,6 +211,9 @@ export function patchResolveCommand() {
 
 function customAction(action, parameters) {
     switch (action) {
+        case 'TT_MENU_PREFERENCES':
+            showMenuPreferences(parameters.action, parameters);
+            break;
         case 'SETTINGS_UPDATE':
             modernUI(true, parameters);
             break;

@@ -9,6 +9,10 @@ import { t } from 'i18next';
 import { filterMembersOnlyVideos } from './membersOnlyHider.js';
 import { stopForcedSubtitles } from './forcedSubtitleStopper.js';
 import { addDislikes } from './returnYoutubeDislike.js';
+import { filterLibraryTabs } from './libraryTabHider.js';
+import { patchPlayerButtons } from './playerButtonPreferences.js';
+import { patchOriginalMetadata } from './originalLanguage.js';
+import { tagMenuItem, arrangeMenu } from '../ui/longPressPreferences.js';
 
 /**
  * This is a minimal reimplementation of the following uBlock Origin rule:
@@ -23,6 +27,9 @@ const origParse = JSON.parse;
 JSON.parse = function () {
   const r = origParse.apply(this, arguments);
   try {
+    filterLibraryTabs(r);
+    patchPlayerButtons(r);
+    patchOriginalMetadata(r);
     stopForcedSubtitles(r);
     addDislikes(r);
     const adBlockEnabled = configRead('enableAdBlock');
@@ -422,7 +429,7 @@ function deArrowify(items) {
     }
     if (!item.tileRenderer && item.lockupViewModel) continue;
     if (!item?.lockupViewModel?.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO') continue;
-    if (configRead('enableDeArrow')) {
+    if (configRead('enableDeArrow') && !configRead('enableOriginalTitles')) {
       const videoID = item.tileRenderer.contentId || item.lockupViewModel.contentId;
       fetch(`https://sponsor.ajay.app/api/branding?videoID=${videoID}`).then(res => res.json()).then(data => {
         if (data.titles.length > 0) {
@@ -490,7 +497,7 @@ function addLongPress(items) {
     if (item?.tileRenderer?.onLongPressCommand?.showMenuCommand?.menu?.menuRenderer?.items
       || item?.lockupViewModel?.rendererContext?.commandContext?.onLongPress?.innertubeCommand?.showMenuCommand?.menu?.menuRenderer?.items) {
       const copiedItem = JSON.parse(JSON.stringify(item));
-      const button = MenuServiceItemRenderer(t('videoMenu.addToQueue'), {
+      const button = tagMenuItem(MenuServiceItemRenderer(t('videoMenu.addToQueue'), {
         clickTrackingParams: null,
         playlistEditEndpoint: {
           customAction: {
@@ -498,11 +505,12 @@ function addLongPress(items) {
             parameters: copiedItem
           }
         }
-      })
+      }), 'queue');
       const menuItems = item.tileRenderer ? item.tileRenderer.onLongPressCommand.showMenuCommand.menu.menuRenderer.items
         : item.lockupViewModel.rendererContext.commandContext.onLongPress.innertubeCommand.showMenuCommand.menu.menuRenderer.items;
-      menuItems.push(button);
+      if (!menuItems.some(entry => entry.__ttMenuId === 'queue')) menuItems.push(button);
       addFeedbackMenuItems(item, menuItems);
+      menuItems.splice(0, menuItems.length, ...arrangeMenu(menuItems));
       continue;
     }
     if (!configRead('enableLongPress')) continue;
@@ -526,6 +534,7 @@ function addLongPress(items) {
       item: copiedItem
     });
     addFeedbackMenuItems(item, data.showMenuCommand.menu.menuRenderer.items);
+    data.showMenuCommand.menu.menuRenderer.items = arrangeMenu(data.showMenuCommand.menu.menuRenderer.items);
     item.tileRenderer ? item.tileRenderer.onLongPressCommand = data
     : item.lockupViewModel.rendererContext.commandContext.onLongPress = {
       innertubeCommand: data
@@ -565,8 +574,8 @@ function addFeedbackMenuItems(item, menuItems) {
       menuItems.push(feedbackItem);
     }
   }
-  if (channel) {
-    menuItems.push(MenuServiceItemRenderer(t('videoMenu.blockChannel'), {
+  if (channel && !menuItems.some(entry => entry.__ttMenuId === 'blockChannel')) {
+    menuItems.push(tagMenuItem(MenuServiceItemRenderer(t('videoMenu.blockChannel'), {
       clickTrackingParams: null,
       playlistEditEndpoint: {
         customAction: {
@@ -574,7 +583,7 @@ function addFeedbackMenuItems(item, menuItems) {
           parameters: channel
         }
       }
-    }));
+    }), 'blockChannel'));
   }
 }
 
@@ -588,7 +597,7 @@ function menuHasFeedbackItems(menuItems) {
 
 function feedbackMenuItems(panel, videoId, channel) {
   return [
-    MenuServiceItemRenderer(t('videoMenu.notInterested'), {
+    tagMenuItem(MenuServiceItemRenderer(t('videoMenu.notInterested'), {
       clickTrackingParams: null,
       playlistEditEndpoint: {
         customAction: {
@@ -596,8 +605,8 @@ function feedbackMenuItems(panel, videoId, channel) {
           parameters: { panel, videoId }
         }
       }
-    }),
-    MenuServiceItemRenderer(t('videoMenu.dontRecommendChannel'), {
+    }), 'notInterested'),
+    tagMenuItem(MenuServiceItemRenderer(t('videoMenu.dontRecommendChannel'), {
       clickTrackingParams: null,
       playlistEditEndpoint: {
         customAction: {
@@ -605,7 +614,7 @@ function feedbackMenuItems(panel, videoId, channel) {
           parameters: { panel, channel }
         }
       }
-    })
+    }), 'dontRecommendChannel')
   ];
 }
 

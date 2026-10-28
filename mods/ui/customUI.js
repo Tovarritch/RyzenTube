@@ -4,6 +4,7 @@ import { extractAssignedFunctions } from "../utils/ASTParser.js";
 import { configRead } from "../config.js";
 import { ButtonRenderer } from "./ytUI.js";
 import { t } from 'i18next';
+import { shouldHidePlayerButton } from '../features/playerButtonPreferences.js';
 
 function applyPatches() {
     if (!window._yttv) return setTimeout(applyPatches, 250);
@@ -63,7 +64,7 @@ function applyPatches() {
 
         const settingActionGroup = functions.find(func => {
             return func.rhs.includes('TRANSPORT_CONTROLS_BUTTON_TYPE_PLAYBACK_SETTINGS');
-        }).left.split('.')[1];
+        })?.left.split('.')[1];
 
         if (!settingActionGroup) return inst;
 
@@ -85,7 +86,7 @@ function applyPatches() {
                     return true;
                 }
             }
-        }).left.split('.')[1];
+        })?.left.split('.')[1];
 
         const nextButtonName = functions.find(func => {
             if (func.rhs.includes('skipPreviousButton')) {
@@ -95,9 +96,15 @@ function applyPatches() {
                     return true;
                 }
             }
-        }).left.split('.')[1];
+        })?.left.split('.')[1];
 
-        const engagementActionButton = functions.find(func => func.rhs.includes('props.data.engagementActions')).left.split('.')[1];
+        const engagementActionButton = functions.find(func => func.rhs.includes('props.data.engagementActions'))?.left.split('.')[1];
+        if (engagementActionButton) {
+            const nativeEngagement = inst[engagementActionButton];
+            inst[engagementActionButton] = function () {
+                return nativeEngagement.apply(this, arguments).filter(item => !shouldHidePlayerButton(item));
+            };
+        }
 
         if (engagementActionButton && configRead('enableSpeedControlsButton')) {
             const origEngagementActionButton = inst[engagementActionButton];
@@ -123,7 +130,7 @@ function applyPatches() {
             }
         }
 
-        if (!configRead('enableSuperThanksButton')) {
+        if (engagementActionButton && !configRead('enableSuperThanksButton')) {
             const origEngagementActionButton = inst[engagementActionButton];
             inst[engagementActionButton] = function () {
                 const res = origEngagementActionButton.apply(this, arguments);
@@ -133,7 +140,7 @@ function applyPatches() {
             }
         }
         
-        if (!configRead('enableAIAskButton')) {
+        if (engagementActionButton && !configRead('enableAIAskButton')) {
             const origEngagementActionButton = inst[engagementActionButton];
             inst[engagementActionButton] = function () {
                 const res = origEngagementActionButton.apply(this, arguments);
@@ -143,9 +150,9 @@ function applyPatches() {
             }
         }
 
-        if (configRead('enablePreviousNextButtons')) {
-            if (!previousButtonName || !nextButtonName) return inst;
+        if (previousButtonName && nextButtonName) {
             inst[previousButtonName] = function () {
+                if (!configRead('enablePreviousNextButtons')) return null;
                 return ButtonRenderer(
                     false,
                     t('player.previous'),
@@ -159,6 +166,7 @@ function applyPatches() {
             }
 
             inst[nextButtonName] = function () {
+                if (!configRead('enablePreviousNextButtons')) return null;
                 return ButtonRenderer(
                     false,
                     t('player.next'),

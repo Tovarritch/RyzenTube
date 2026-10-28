@@ -69,6 +69,8 @@ test('remote navigation reaches Refresh even when native navigation skips it', a
         );
         assert.equal(await page.locator('#search').evaluate(element => getComputedStyle(element).color), 'rgb(241, 241, 241)');
         assert.equal(await page.locator('#search').isVisible(), true);
+        assert.equal(await page.locator('ytlr-search-text-box').evaluate(element => getComputedStyle(element).borderRadius), '999px');
+        assert.equal(await page.locator('#search').evaluate(element => getComputedStyle(element).borderRadius), '999px', 'Search keeps rounded corners while Refresh is focused');
         await page.keyboard.press('Enter');
         assert.equal(await reloads(), 1, 'OK on Refresh must reload exactly once');
         await page.keyboard.press('ArrowLeft');

@@ -198,7 +198,7 @@ function longPressData(data) {
         action: 'ACTION_ADD_VIDEO'
     };
 
-    return {
+    const result = {
         clickTrackingParams: null,
         showMenuCommand: {
             contentId: data.videoId,
@@ -265,7 +265,10 @@ function longPressData(data) {
                 }
             }
         }
-    }
+    };
+    const ids = ['play', 'watchLater', 'playlist', 'queue', 'channel'];
+    result.showMenuCommand.menu.menuRenderer.items.forEach((item, index) => { item.__ttMenuId = ids[index]; });
+    return result;
 }
 
 function MenuServiceItemRenderer(text, serviceEndpoint) {

@@ -2,6 +2,7 @@ import sha256 from '../tiny-sha256.js';
 import { configRead } from '../config.js';
 import { showToast } from '../ui/ytUI.js';
 import { t } from 'i18next';
+import { createSponsorOverlay } from './sponsorOverlay.js';
 
 // Copied from https://github.com/ajayyy/SponsorBlock/blob/da1a535de784540ee10166a75a3eb8537073838c/src/config.ts#L113-L134
 const barTypes = {
@@ -170,87 +171,10 @@ class SponsorBlockHandler {
   }
 
   buildOverlay() {
-    if (this.segmentsoverlay) {
-      console.info('Overlay already built');
-      return;
-    }
-
-    if (!this.video || !this.video.duration) {
-      console.info('No video duration yet');
-      return;
-    }
-
-    const videoDuration = this.video.duration;
-    const slider = document.querySelector('div[idomkey="slider"]');
-    if (!slider) return setTimeout(() => this.buildOverlay(), 100);
-
-    this.segmentsoverlay = document.createElement('div');
-
-    this.segmentsoverlay.classList.add('ytLrProgressBarSlider', 'ytLrProgressBarSliderRectangularProgressBar');
-    this.segmentsoverlay.style.setProperty('z-index', '10', 'important');
-    this.segmentsoverlay.style.setProperty('background-color', 'rgba(0, 0, 0, 0)', 'important');
-    this.segmentsoverlay.style.setProperty('width', '72rem', 'important');
-    this.segmentsoverlay.style.setProperty('left', '4rem', 'important');
-    const sliderRect = slider.getBoundingClientRect();
-    if (!slider.classList.contains('ytLrProgressBarSlider')) {
-      for (let i = 0; i < slider.classList.length; i++) {
-        this.segmentsoverlay.classList.add(slider.classList[i]);
-      }
-      this.segmentsoverlay.style.setProperty('height', `${sliderRect.height}px`, 'important');
-      this.segmentsoverlay.style.setProperty('bottom', `${sliderRect.bottom - sliderRect.top}px`, 'important');      
-    }
-    this.segments.forEach((segment) => {
-      const [start, end] = segment.segment;
-      const barType = barTypes[segment.category] || {
-        color: 'blue',
-        opacity: 0.7
-      };
-
-      const leftPercent = videoDuration ? (100.0 * start) / videoDuration : 0;
-      const widthPercent = videoDuration ? (100.0 * (end - start)) / videoDuration : 0;
-
-      const elm = document.createElement('div');
-      elm.style.setProperty('background-color', barType.color, 'important');
-      elm.style.setProperty('opacity', barType.opacity, 'important');
-      elm.style.setProperty('height', '100%', 'important');
-      elm.style.setProperty('width', `${segment.category === 'poi_highlight' ? 1 : widthPercent}%`, 'important');
-      elm.style.setProperty('left', `${leftPercent}%`, 'important');
-      elm.style.setProperty('position', 'absolute', 'important');
-      console.info('Generated element', elm, 'from', segment);
-      this.segmentsoverlay.appendChild(elm);
-    });
-
-    this.observer = new MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        if (m.removedNodes) {
-          for (const node of m.removedNodes) {
-            if (node === this.segmentsoverlay) {
-              console.info('bringing back segments overlay');
-              this.slider.appendChild(this.segmentsoverlay);
-            }
-          }
-        }
-
-        if (document.querySelector('ytlr-progress-bar').getAttribute('hybridnavfocusable') === 'false') {
-          this.segmentsoverlay.style.setProperty('display', 'none', 'important');
-        } else {
-          this.segmentsoverlay.style.setProperty('display', 'block', 'important');
-        }
-      });
-    });
-
-    this.sliderInterval = setInterval(() => {
-      this.slider = document.querySelector('ytlr-redux-connect-ytlr-progress-bar');
-      if (this.slider) {
-        clearInterval(this.sliderInterval);
-        this.sliderInterval = null;
-        this.observer.observe(this.slider, {
-          childList: true,
-          subtree: true
-        });
-        this.slider.appendChild(this.segmentsoverlay);
-      }
-    }, 500);
+    this.removeSegmentsOverlay?.();
+    this.removeSegmentsOverlay = null;
+    if (!this.active || !this.video || !Number.isFinite(this.video.duration) || !this.video.duration) return;
+    this.removeSegmentsOverlay = createSponsorOverlay(this.video, this.segments, barTypes);
   }
 
   scheduleSkip() {
@@ -349,6 +273,8 @@ class SponsorBlockHandler {
     console.info(this.videoID, 'Destroying');
 
     this.active = false;
+    this.removeSegmentsOverlay?.();
+    this.removeSegmentsOverlay = null;
 
     if (this.nextSkipTimeout) {
       clearTimeout(this.nextSkipTimeout);

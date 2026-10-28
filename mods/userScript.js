@@ -26,6 +26,7 @@ import "./features/videoQueuing.js";
 import "./features/dislikeCount.js";
 import "./features/searchRefreshButton.js";
 import "./features/backToStart.js";
+import "./features/instantSeek.js";
 import "./features/enableFeatures.js";
 import "./ui/customUI.js";
 import "./ui/customGuideAction.js";
