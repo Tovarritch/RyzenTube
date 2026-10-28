@@ -81,6 +81,8 @@ test('SponsorBlock overlay follows the slider and disappears on the ended/Up Nex
   await page.addScriptTag({content:source('features/sponsorOverlay.js')+'\nwindow.cleanup=createSponsorOverlay(document.querySelector("video"),[{segment:[10,20],category:"sponsor"}],{sponsor:{color:"green",opacity:.7}});'});
   assert.equal(await page.locator('[idomkey="slider"] > .tt-sponsor-segments').count(),1);
   assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),true);
+  await page.evaluate(()=>{document.querySelector('ytlr-progress-bar').setAttribute('hybridnavfocusable','false');document.querySelector('video').dispatchEvent(new Event('timeupdate'));});
+  assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),true,'Segments stay on the bar while focus is on player buttons');
   await page.evaluate(()=>{window.ended=true;document.querySelector('video').dispatchEvent(new Event('ended'));});
   assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),false);
   await page.evaluate(()=>{window.ended=false;window.position=99.95;document.querySelector('video').dispatchEvent(new Event('timeupdate'));});

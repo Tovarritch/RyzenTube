@@ -59,7 +59,7 @@ override the port with the `TIZENTUBE_DEV_PORT` environment variable.
   of a row. Press Back again to return to the top of the feed. Back works normally
   once at the start and in pop-ups.
 - **Refresh Home:** Press OK on the Home sidebar entry to load a fresh feed.
-- **Player exit confirmation:** The first Back displays a reminder; press Back
+- **Player exit confirmation:** The first Back is held silently; press Back
   again within two seconds to leave playback. Available in Video Player Settings.
 - **Instant Seek:** Hold Left/Right on the seek bar and release to commit without
   pressing OK. Set the delay from 250 to 1500 ms in Video Player Settings.

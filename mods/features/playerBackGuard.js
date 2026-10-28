@@ -1,5 +1,4 @@
 import { configRead } from '../config.js';
-import { showToast } from '../ui/ytUI.js';
 let armedAt = 0;
 let swallow = false;
 let passing = false;
@@ -33,7 +32,6 @@ function handle(event) {
   const now = Date.now();
   if (armedAt && now - armedAt <= 2000) { armedAt = 0; passing = true; return; }
   armedAt = now;
-  showToast('TizenTube', 'Press Back again to leave the player');
   const progress = document.querySelector('ytlr-progress-bar');
   // Let the first Back close visible player controls. When controls are already
   // hidden, block the navigation itself until the confirming second press.
