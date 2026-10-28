@@ -39,6 +39,7 @@ const defaultConfig = {
   enablePreviousNextButtons: true,
   hidePlayerJoinButton: false,
   enableInstantSeek: false,
+  enableDoubleBackExit: true,
   instantSeekDelayMs: 500,
   hiddenLibraryTabIds: [],
   longPressMenuHidden: [],

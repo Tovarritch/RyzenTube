@@ -111,7 +111,7 @@ function updateDOM() {
     updateTitleNodes(el, id);
   }
   if (validId(videoId)) {
-    for (const container of document.querySelectorAll('ytlr-video-title, ytlr-player-controls, ytlr-video-description-header-renderer')) updateTitleNodes(container, videoId);
+    for (const container of document.querySelectorAll('ytlr-video-title, ytlr-video-title-tray, ytlr-watch-metadata, ytlr-player-controls, ytlr-video-description-header-renderer')) updateTitleNodes(container, videoId);
   }
 }
 function updateTitleNodes(container, id) {

@@ -18,6 +18,7 @@ test('Back resets native row selection, then feed selection, then resumes normal
         `);
         await page.evaluate(() => {
             window.setDiagnostic = () => {};
+            window.inFullPlayer = () => false;
             window.normalBack = 0;
             window.resets = [];
             for (const [id, layout, index] of [['horizontal', 'horizontal', 80], ['vertical', 'vertical', 100]]) {

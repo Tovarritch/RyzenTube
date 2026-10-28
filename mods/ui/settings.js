@@ -312,6 +312,9 @@ export default function modernUI(update, parameters) {
                     ]
                 },
                 {
+                    name: 'Press Back twice to leave the player', value: 'enableDoubleBackExit', icon: 'ARROW_BACK',
+                },
+                {
                     name: 'Instant Seek', value: null, menuId: 'tt-instant-seek',
                     menuHeader: { title: 'Instant Seek', subtitle: 'Hold Left or Right on the seek bar. Seeking commits after you release the button.' },
                     options: [

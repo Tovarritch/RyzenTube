@@ -99,6 +99,14 @@ function applyPatches() {
         })?.left.split('.')[1];
 
         const engagementActionButton = functions.find(func => func.rhs.includes('props.data.engagementActions'))?.left.split('.')[1];
+        const promotedActionButton = functions.find(func => func.rhs.includes('props.data.promotedActions')
+            && func.rhs.includes('TRANSPORT_CONTROLS_BUTTON_TYPE_FEATURED_ACTION'))?.left.split('.')[1];
+        if (promotedActionButton) {
+            const nativePromoted = inst[promotedActionButton];
+            inst[promotedActionButton] = function () {
+                return nativePromoted.apply(this, arguments).filter(item => !shouldHidePlayerButton(item));
+            };
+        }
         if (engagementActionButton) {
             const nativeEngagement = inst[engagementActionButton];
             inst[engagementActionButton] = function () {

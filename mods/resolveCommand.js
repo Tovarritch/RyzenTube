@@ -271,7 +271,6 @@ function customAction(action, parameters) {
             break;
         case 'NOT_INTERESTED':
             hideVideoLocally(parameters.videoId);
-            showToast('TizenTube', t('toasts.videoHidden'));
             dismissVideoMenu();
             if (parameters.panel) markFeedback(parameters.panel, 0, true);
             break;

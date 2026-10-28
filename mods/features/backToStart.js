@@ -1,6 +1,7 @@
 // Back resets the native virtual list selection, letting YouTube update both
 // focus and scroll position. DOM scrollTo alone cannot move its virtual lists.
 import { setDiagnostic } from '../diagnostics.js';
+import { inFullPlayer } from './playerBackGuard.js';
 let consumeBackRelease = false;
 const TILE_SELECTOR = 'ytlr-tile-renderer, yt-lockup-view-model, ytlr-lockup-view-model, ytlr-compact-video-renderer, [role="gridcell"]';
 
@@ -10,6 +11,7 @@ function isBack(event) {
 }
 
 function feedTarget(event) {
+    if (inFullPlayer()) return null;
     if (/^#?\/?(?:watch|shorts)(?:[/?]|$)/.test(window.location.hash)) return null;
     const excluded = 'input, textarea, [contenteditable="true"], [role="dialog"], ytlr-overlay-panel-renderer, ytlr-overlay-section-renderer';
     for (const node of [event.target, document.activeElement]) {
