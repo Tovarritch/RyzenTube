@@ -77,6 +77,7 @@ const playerMenu = () => [
     link('Mini Player', { commandExecutorCommand: { commands: [{ customAction: { action: 'ENTER_MP' } }] } }),
     link('Something new', { openClientOverlayAction: { type: 'CLIENT_OVERLAY_TYPE_NEW' } }),
     link('Audio', undefined, 'VOLUME_UP'),
+    link('Audio Track', { openClientOverlayAction: { type: 'CLIENT_OVERLAY_TYPE_AUDIO_TRACK' } }),
     link('Speed', { signalAction: { customAction: { action: 'TT_SPEED_SETTINGS_SHOW' } } }, 'SPEEDOMETER'),
     { playlistLoopButtonRenderer: {} },
     link('Stats for nerds', { signalAction: { signal: 'TOGGLE_VIDEO_INFO' } }),
@@ -84,12 +85,12 @@ const playerMenu = () => [
 const titles = items => items.map(i => i.compactLinkRenderer?.title.simpleText || 'Loop');
 
 test('player settings entries are recognised, hidden and sorted', () => {
-    assert.deepEqual(playerMenu().map(playerMenuId), ['quality', 'captions', 'miniPlayer', null, 'audio', 'speed', 'loop', 'stats']);
+    assert.deepEqual(playerMenu().map(playerMenuId), ['quality', 'captions', 'miniPlayer', null, 'audio', 'audioTrack', 'speed', 'loop', 'stats']);
     assert.deepEqual(titles(arrangePlayerMenu(playerMenu())), titles(playerMenu()), 'Unchanged by default');
 
     configWrite('playerMenuHidden', ['miniPlayer', 'stats']);
     configWrite('playerMenuOrder', ['speed', 'loop']);
     assert.deepEqual(titles(arrangePlayerMenu(playerMenu())),
-        ['Speed', 'Loop', 'Something new', 'Quality', 'Captions', 'Audio'],
+        ['Speed', 'Loop', 'Something new', 'Quality', 'Captions', 'Audio', 'Audio Track'],
         'Unknown entries keep their slot; the rest follow the chosen order');
 });

@@ -12,7 +12,7 @@ export const MENU_ENTRIES = [
 export const PLAYER_MENU_ENTRIES = [
   ['quality', 'Quality'], ['captions', 'Captions'], ['miniPlayer', 'Mini Player'],
   ['pip', 'Picture in Picture'], ['screenOff', 'Turn off screen'], ['share', 'Share'],
-  ['audio', 'Audio'], ['speed', 'Speed'], ['loop', 'Loop'], ['report', 'Report'],
+  ['audio', 'Audio'], ['audioTrack', 'Audio Track'], ['speed', 'Speed'], ['loop', 'Repeat'], ['report', 'Report'],
   ['feedback', 'Feedback'], ['stats', 'Stats for nerds'],
 ];
 export const MENUS = {
@@ -50,8 +50,11 @@ export function playerMenuId(item) {
   const actions = (endpoint.commandExecutorCommand?.commands || [endpoint])
     .map(command => command?.customAction?.action || command?.signalAction?.customAction?.action).filter(Boolean);
   const icon = link.icon?.iconType || '';
+  const title = link.title?.simpleText || (link.title?.runs || []).map(run => run?.text || '').join('');
   if (/VIDEO_QUALITY/.test(overlay)) return 'quality';
   if (/CAPTIONS/.test(overlay) || icon === 'CAPTIONS') return 'captions';
+  // Videos with dubbed audio add an "Audio Track" entry next to "Audio".
+  if (/AUDIO_TRACK/.test(overlay) || /^audio track/i.test(title)) return 'audioTrack';
   if (/AUDIO/.test(overlay) || icon === 'VOLUME_UP') return 'audio';
   if (actions.includes('TT_SPEED_SETTINGS_SHOW') || icon === 'SPEEDOMETER' || icon === 'SLOW_MOTION_VIDEO') return 'speed';
   if (actions.includes('ENTER_MP')) return 'miniPlayer';
