@@ -111,8 +111,9 @@ class SponsorBlockHandler {
       const slider = document.querySelector('div[idomkey="slider"]');
       const sliderRect = slider?.getBoundingClientRect();
       const isOldUI = !document.querySelector('div[idomkey="Metadata-Section"]');
-      if (isOldUI && sliderRect) {
-        this.segmentsoverlay.style.setProperty('top', `${sliderRect.top}px`, 'important');
+      const overlay = document.querySelector('.tt-sponsor-segments');
+      if (isOldUI && sliderRect && overlay) {
+        overlay.style.setProperty('top', `${sliderRect.top}px`, 'important');
       }
       this.scheduleSkip();
     }
