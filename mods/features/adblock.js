@@ -14,6 +14,7 @@ import { patchPlayerButtons } from './playerButtonPreferences.js';
 import { patchOriginalMetadata } from './originalLanguage.js';
 import { tagMenuItem, arrangeMenu } from '../ui/longPressPreferences.js';
 import { hideDuplicateVideos } from './duplicateHider.js';
+import { patchCommentPanel } from './commentSort.js';
 
 /**
  * This is a minimal reimplementation of the following uBlock Origin rule:
@@ -31,6 +32,7 @@ JSON.parse = function () {
     filterLibraryTabs(r);
     patchPlayerButtons(r);
     patchOriginalMetadata(r);
+    patchCommentPanel(r);
     stopForcedSubtitles(r);
     addDislikes(r);
     const adBlockEnabled = configRead('enableAdBlock');

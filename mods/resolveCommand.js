@@ -9,6 +9,7 @@ import { requestNextAndNavigateChannel, getFeedbackPanelTokens, sendFeedbackToke
 import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
 import { showMenuPreferences, arrangePlayerMenu } from './ui/longPressPreferences.js';
+import { sortComments, openSortedComments } from './features/commentSort.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 
 export default function resolveCommand(cmd, _) {
@@ -157,6 +158,8 @@ export function patchResolveCommand() {
 
                     const list = cmd.openPopupAction.popup.overlaySectionRenderer.overlay.overlayTwoPanelRenderer.actionPanel.overlayPanelRenderer.content.overlayPanelItemListRenderer;
                     list.items = arrangePlayerMenu(list.items);
+                } else if (openSortedComments(cmd)) {
+                    return true;
                 } else if (cmd?.watchEndpoint?.videoId) {
                     window.isPipPlaying = false;
                     const ytlrPlayerContainer = document.querySelector('ytlr-player-container');
@@ -202,6 +205,9 @@ export function patchResolveCommand() {
 
 function customAction(action, parameters) {
     switch (action) {
+        case 'TT_COMMENTS_SORT':
+            sortComments(parameters.mode);
+            break;
         case 'TT_MENU_PREFERENCES':
             showMenuPreferences(parameters.action, parameters);
             break;

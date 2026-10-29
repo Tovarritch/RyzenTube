@@ -60,6 +60,7 @@ const defaultConfig = {
   hideWatchedVideosThreshold: 80,
   hideWatchedVideosPages: [],
   hideDuplicateVideos: false,
+  commentSortOrder: '',
   enableHideEndScreenCards: false,
   enableYouThereRenderer: true,
   lastAnnouncementCheck: 0,

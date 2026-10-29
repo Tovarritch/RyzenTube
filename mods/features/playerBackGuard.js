@@ -1,5 +1,8 @@
 import { configRead } from '../config.js';
 import resolveCommand from '../resolveCommand.js';
+// The confirming Back must follow quickly, like a double click; a slower
+// second press is treated as a new first press.
+export const DOUBLE_BACK_MS = 600;
 let armedAt = 0;
 let swallow = false;
 let passing = false;
@@ -59,7 +62,7 @@ function handle(event) {
   if (event.repeat) return stop(event);
   const now = Date.now();
   const shown = controlsShown();
-  if (armedAt && now - armedAt <= 2000) {
+  if (armedAt && now - armedAt <= DOUBLE_BACK_MS) {
     // Confirmed: leave the player. With the controls up a plain Back would
     // only hide them, so navigate back directly.
     armedAt = 0;

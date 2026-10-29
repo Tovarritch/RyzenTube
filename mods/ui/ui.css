@@ -155,3 +155,10 @@ div[idomkey="shadow"] {
 .ytContribIconHost::before {
     font-family: "YouTube Icons Outlined";
 }
+
+/* Comment sort buttons: YouTube sizes a button row for a grid of buttons
+   (23rem). The comment list measures rendered heights, so this keeps the row
+   as tall as its round icon buttons. */
+ytlr-engagement-panel-section-list-renderer ytlr-horizontal-button-list-renderer {
+    height: 4rem !important;
+}

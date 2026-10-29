@@ -22,9 +22,12 @@ test('Back on a bare video shows the controls, a second Back leaves the player',
   assert.deepEqual(await state(page),{normalBack:0,ups:1,commands:[],controls:true},'First Back reveals the controls');
   await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:0,ups:1,commands:['HISTORY_BACK'],controls:true},'Confirming Back leaves the player');
-  await page.locator('#menu').focus();await page.keyboard.press('Escape');assert.equal((await state(page)).normalBack,1,'Menus keep their own Back');
+  await page.evaluate(()=>{setControls(false);commands.length=0;});await page.locator('#stage').focus();await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);await page.keyboard.press('Escape');
+  assert.deepEqual(await state(page),{normalBack:1,ups:2,commands:[],controls:true},'A slow second Back is a new first press: YouTube just hides the controls');
+  await page.locator('#menu').focus();await page.keyboard.press('Escape');assert.equal((await state(page)).normalBack,2,'Menus keep their own Back');
   await page.locator('#stage').focus();await page.keyboard.press('Escape');await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');
-  assert.equal((await state(page)).commands.length,1,'Another key resets confirmation');
+  assert.equal((await state(page)).commands.length,0,'Another key resets confirmation');
  }finally{await browser.close();}
 });
 test('With controls up, the first Back hides them and the second leaves',async()=>{
@@ -36,7 +39,7 @@ test('With controls up, the first Back hides them and the second leaves',async()
   assert.deepEqual(await state(page),{normalBack:1,ups:0,commands:[],controls:false});
   await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:2,ups:0,commands:[],controls:false},'YouTube navigates back on its own');
-  await page.waitForTimeout(2050);await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:2,ups:1,commands:[],controls:true},'Expired confirmation only reveals the controls');
  }finally{await browser.close();}
 });
@@ -46,7 +49,7 @@ test('Without confirmation, Back shows the controls and Back again leaves',async
   const page=await setup(browser,{enableDoubleBackExit:false,enableBackRevealsControls:true});
   await page.locator('#stage').focus();await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:0,ups:1,commands:[],controls:true});
-  await page.waitForTimeout(2050);await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:0,ups:1,commands:['HISTORY_BACK'],controls:true});
  }finally{await browser.close();}
 });
