@@ -1,19 +1,19 @@
 const assert=require('node:assert/strict');const {test}=require('node:test');
 const {readFileSync}=require('node:fs');const {chromium}=require('playwright');
-// Controls are "up" while focus is inside the watch page; #stage stands in for
-// YouTube's overlay stage, which holds focus once they hide. An Up key brings
+// YouTube keeps DOM focus on the watch page and marks it hybridnavfocusable=true
+// on a bare video and false while the controls are up. An Up key brings
 // them back, like YouTube does.
-const page_html='<ytlr-watch-default style="display:block;height:300px"><ytlr-progress-bar hybridnavfocusable="true" tabindex="0" style="display:block;height:5px"></ytlr-progress-bar><button id="player">Player</button></ytlr-watch-default><div id="stage" tabindex="0">stage</div><div role="dialog"><button id="menu">Menu</button></div>';
+const page_html='<ytlr-watch-default hybridnavfocusable="true" style="display:block;height:300px"><ytlr-progress-bar hybridnavfocusable="true" tabindex="0" style="display:block;height:5px"></ytlr-progress-bar><button id="player">Player</button></ytlr-watch-default><div id="stage" tabindex="0">stage</div><div role="dialog"><button id="menu">Menu</button></div>';
 async function setup(browser,config){
  const page=await browser.newPage();await page.setContent(page_html);
  await page.evaluate(config=>{window.configRead=key=>config[key];window.normalBack=0;window.ups=0;window.commands=[];
-  window.resolveCommand=c=>commands.push(c.signalAction.signal);
-  document.addEventListener('keydown',e=>{if(e.key==='ArrowUp'){ups++;document.querySelector('ytlr-progress-bar').focus();}});
+  window.resolveCommand=c=>commands.push(c.signalAction.signal);window.setControls=on=>document.querySelector('ytlr-watch-default').setAttribute('hybridnavfocusable',on?'false':'true');
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowUp'){ups++;window.setControls(true);}});
   document.addEventListener('keyup',e=>{if(e.key==='Escape')normalBack++;});},config);
  await page.addScriptTag({content:readFileSync('mods/features/playerBackGuard.js','utf8').replace(/^import .*;\r?\n/gm,'').replace(/^export /gm,'')});
  return page;
 }
-const state=page=>page.evaluate(()=>({normalBack,ups,commands,controls:!!document.activeElement.closest('ytlr-watch-default')}));
+const state=page=>page.evaluate(()=>({normalBack,ups,commands,controls:document.querySelector('ytlr-watch-default').getAttribute('hybridnavfocusable')==='false'}));
 test('Back on a bare video shows the controls, a second Back leaves the player',async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH});
  try{
@@ -31,8 +31,8 @@ test('With controls up, the first Back hides them and the second leaves',async()
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH});
  try{
   const page=await setup(browser,{enableDoubleBackExit:true,enableBackRevealsControls:true});
-  await page.evaluate(()=>document.addEventListener('keyup',e=>{if(e.key==='Escape'&&document.activeElement.closest('ytlr-watch-default'))document.querySelector('#stage').focus();}));
-  await page.locator('#player').focus();await page.keyboard.press('Escape');
+  await page.evaluate(()=>document.addEventListener('keyup',e=>{if(e.key==='Escape')setControls(false);}));
+  await page.evaluate(()=>setControls(true));await page.locator('#player').focus();await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:1,ups:0,commands:[],controls:false});
   await page.keyboard.press('Escape');
   assert.deepEqual(await state(page),{normalBack:2,ups:0,commands:[],controls:false},'YouTube navigates back on its own');

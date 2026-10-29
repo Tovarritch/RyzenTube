@@ -1,1 +1,1 @@
-export const BUILD_LABEL = 'r23';
+export const BUILD_LABEL = 'r24';

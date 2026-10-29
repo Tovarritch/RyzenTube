@@ -16,14 +16,15 @@ export function inFullPlayer() {
   return visible(document.querySelector('ytlr-watch-default, ytlr-watch-page'))
     || /^#?\/?watch(?:[/?]|$)/.test(location.hash);
 }
-// While the controls are up, focus sits inside the watch page (seek bar,
-// buttons, related videos). Once they hide, YouTube moves it to the overlay stage.
+// YouTube tracks focus itself; document.activeElement stays on the watch page.
+// On a bare video the watch page is the focus target (hybridnavfocusable=true)
+// and the seek bar is marked zylon-hidden. Once the controls, or the related
+// videos below them, take focus, the watch page stops being focusable.
 export function controlsShown() {
-  const active = document.activeElement;
-  if (!active?.closest('ytlr-watch-default, ytlr-watch-page')) return false;
+  const watch = document.querySelector('ytlr-watch-default');
+  if (watch?.hasAttribute('hybridnavfocusable')) return watch.getAttribute('hybridnavfocusable') === 'false';
   const progress = document.querySelector('ytlr-progress-bar');
-  if (progress?.contains(active) && progress.getAttribute('hybridnavfocusable') === 'false') return false;
-  return !progress || visible(progress);
+  return !progress || (!progress.classList.contains('zylon-hidden') && visible(progress));
 }
 // Any direction key brings the controls back with focus on the seek bar.
 // Up does so without seeking or pausing.
