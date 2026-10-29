@@ -5,11 +5,24 @@ import { GuideEntryRenderer } from "./ytUI.js";
 const origParse = JSON.parse;
 JSON.parse = function () {
     const r = origParse.apply(this, arguments);
-    const guideSection = r.items?.[0]?.guideSectionRenderer;
+    // Every YouTube response passes through here, including sign-in replies such
+    // as an empty account list ({"items": []}). A throw would make YouTube's own
+    // JSON.parse fail and lose that response, so guide patching is best-effort.
+    try {
+        patchGuide(r);
+    } catch (err) {
+        console.warn('TizenTube: guide patch skipped:', err);
+    }
+    return r;
+}
+
+function patchGuide(r) {
+    if (!r || typeof r !== 'object' || !Array.isArray(r.items) || !r.items[0]?.guideSectionRenderer) return;
+    const guideSection = r.items[0].guideSectionRenderer;
     const order = configRead('sidebarContentsOrder');
     if (guideSection && Array.isArray(order)) {
         let orderChanged = false;
-        for (const item of guideSection.items) {
+        for (const item of guideSection.items || []) {
             // Not every guide item is a guideEntryRenderer: a throw here would fail
             // the caller's JSON.parse and lose the whole guide response.
             const itemOrder = item.guideEntryRenderer?.navigationEndpoint?.browseEndpoint?.browseId
@@ -89,7 +102,8 @@ JSON.parse = function () {
     const disableChannelsOnSidebar = configRead('disableChannelsOnSidebar');
     if (r.items && Array.isArray(r.items) && r.items[0].guideSectionRenderer) {
         for (let i = 0; i < r.items.length; i++) {
-            const section = r.items[i].guideSectionRenderer;
+            const section = r.items[i]?.guideSectionRenderer;
+            if (!section || !Array.isArray(section.items)) continue;
             section.originalItems = section.items.slice();
             for (let j = 0; j < section.items.length; j++) {
                 const item = section.items[j].guideEntryRenderer;
@@ -105,8 +119,6 @@ JSON.parse = function () {
             }
         }
     }
-
-    return r;
 }
 
 configChangeEmitter.addEventListener('configChange', (e) => {
