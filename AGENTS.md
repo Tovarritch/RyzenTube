@@ -6,7 +6,7 @@
 - Every new Android TV release must include the signed 32-bit APK named exactly
   `TizenTube-AndroidTV-arm.apk`. Keep this filename unchanged.
 - Permanent Downloader code **5986196** points to
-  `https://github.com/Tovarritch/RyzenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk`.
+  `https://github.com/Tovarritch/TizenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk`.
   Verify this URL serves the new release before reporting publication complete.
 - Preserve the existing application package ID and signing key for in-place
   updates. The repository address is referenced by installed APK loaders.

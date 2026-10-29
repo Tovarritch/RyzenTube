@@ -8,11 +8,11 @@
 **TizenTube** is a TizenBrew module that enhances your favourite streaming websites viewing experience by removing ads and adding support for Sponsorblock. **Now works as a standalone app!**
 
 ** **
-🤖 **Android TV:** Install [TizenTube (32-bit ARM)](https://github.com/Tovarritch/RyzenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk) using Downloader code **5986196**.
+🤖 **Android TV:** Install [TizenTube (32-bit ARM)](https://github.com/Tovarritch/TizenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk) using Downloader code **5986196**.
 
 
 <p align="left">
-    <a href="https://github.com/Tovarritch/RyzenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk">
+    <a href="https://github.com/Tovarritch/TizenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk">
         <picture>
             <img width="250px"
                 src=".github/assets/TizenTube_Cobalt_dl-button.png" />
@@ -29,7 +29,7 @@ the downloaded APK. This permanent code downloads the latest 32-bit TizenTube
 release. Reuse it when you want to install an update.
 
 [Permanent Downloader link](https://aftv.news/5986196) ·
-[Direct APK download](https://github.com/Tovarritch/RyzenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk)
+[Direct APK download](https://github.com/Tovarritch/TizenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk)
 
 Only 32-bit ARM APKs are produced for this TV. For release instructions, see
 [Android TV releases](./docs/android-tv-releases.md).

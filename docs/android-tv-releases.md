@@ -5,8 +5,9 @@ support ARM64. Keep existing signing credentials and the application package ID
 so the TV can install updates over its current TizenTube installation.
 
 The app name, release titles and download filenames use **TizenTube**.
-The GitHub repository remains at `Tovarritch/RyzenTube`; installed APK loaders
-use that address to fetch their versioned userscripts.
+The GitHub repository is `Tovarritch/TizenTube`; APK loaders use that address
+to fetch their versioned userscripts. Loaders built before the rename still use
+the old repository name, which GitHub and jsDelivr continue to resolve.
 
 ## Permanent Downloader link
 
@@ -15,7 +16,7 @@ https://aftv.news/5986196
 
 The permanent download URL is:
 
-https://github.com/Tovarritch/RyzenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk
+https://github.com/Tovarritch/TizenTube/releases/latest/download/TizenTube-AndroidTV-arm.apk
 
 Keep this asset name unchanged on every published release. A Downloader code
 pointing to this URL follows the latest GitHub release without a new code.

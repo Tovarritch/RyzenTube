@@ -13,6 +13,7 @@ import { filterLibraryTabs } from './libraryTabHider.js';
 import { patchPlayerButtons } from './playerButtonPreferences.js';
 import { patchOriginalMetadata } from './originalLanguage.js';
 import { tagMenuItem, arrangeMenu } from '../ui/longPressPreferences.js';
+import { hideDuplicateVideos } from './duplicateHider.js';
 
 /**
  * This is a minimal reimplementation of the following uBlock Origin rule:
@@ -334,6 +335,9 @@ JSON.parse = function () {
         )
       })
     }
+
+    // Runs last, once hidden and blocked videos are already gone.
+    hideDuplicateVideos(r);
   } catch (e) {
     console.error('An error occured while processing the JSON:', e);
   }

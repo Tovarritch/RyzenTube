@@ -34,7 +34,7 @@ test('fork menu preferences preserve native items and restore configurable entri
  try {
   const page=await browser.newPage();
   await page.evaluate(()=>{window.settings={longPressMenuHidden:['queue'],longPressMenuOrder:['channel','play','queue']};window.configRead=k=>settings[k];});
-  await page.addScriptTag({content:source('ui/longPressPreferences.js')+'\nwindow.arrangeMenu=arrangeMenu;'});
+  await page.addScriptTag({content:source('ui/menuOrder.js')+'\nwindow.arrangeMenu=arrangeMenu;'});
   const result=await page.evaluate(()=>{
    const nativeA={native:'A'},nativeB={native:'B'};
    const items=[nativeA,{__ttMenuId:'play'},nativeB,{__ttMenuId:'queue'},{__ttMenuId:'channel'}];
@@ -73,17 +73,18 @@ test('Library and player response filtering use IDs, honor the master switch and
  }finally{await browser.close();}
 });
 
-test('SponsorBlock overlay follows the slider and disappears on the ended/Up Next screen',async()=>{
+test('SponsorBlock overlay sits on the seek bar container and disappears on the ended/Up Next screen',async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH});
  try {
-  const page=await browser.newPage();await page.setContent('<video></video><ytlr-progress-bar hybridnavfocusable="true"><div idomkey="slider" style="width:500px;height:10px"></div></ytlr-progress-bar>');
+  const page=await browser.newPage();await page.setContent('<style>.ytLrProgressBarSlider{position:absolute;height:10px}</style><video></video><ytlr-redux-connect-ytlr-progress-bar style="display:block;position:relative;width:600px;height:20px"><ytlr-progress-bar hybridnavfocusable="true"><div idomkey="slider" class="ytLrProgressBarSlider" style="width:500px;height:10px"></div></ytlr-progress-bar></ytlr-redux-connect-ytlr-progress-bar>');
   await page.evaluate(()=>{window.ended=false;window.position=10;const video=document.querySelector('video');Object.defineProperties(video,{ended:{get:()=>ended},duration:{value:100},currentTime:{get:()=>position}});});
   await page.addScriptTag({content:source('features/sponsorOverlay.js')+'\nwindow.cleanup=createSponsorOverlay(document.querySelector("video"),[{segment:[10,20],category:"sponsor"}],{sponsor:{color:"green",opacity:.7}});'});
-  assert.equal(await page.locator('[idomkey="slider"] > .tt-sponsor-segments').count(),1);
+  assert.equal(await page.locator('ytlr-redux-connect-ytlr-progress-bar > .tt-sponsor-segments').count(),1);
   assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),true);
+  assert.equal(await page.locator('.tt-sponsor-segments > div').evaluate(e=>e.style.getPropertyValue('width')),'10%');
   await page.evaluate(()=>{document.querySelector('ytlr-progress-bar').setAttribute('hybridnavfocusable','false');document.querySelector('video').dispatchEvent(new Event('timeupdate'));});
-  assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),true,'Segments stay on the bar while focus is on player buttons');
-  await page.evaluate(()=>{window.ended=true;document.querySelector('video').dispatchEvent(new Event('ended'));});
+  assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),false,'Hidden with the seek bar, as in the original overlay');
+  await page.evaluate(()=>{document.querySelector('ytlr-progress-bar').setAttribute('hybridnavfocusable','true');window.ended=true;document.querySelector('video').dispatchEvent(new Event('ended'));});
   assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),false);
   await page.evaluate(()=>{window.ended=false;window.position=99.95;document.querySelector('video').dispatchEvent(new Event('timeupdate'));});
   assert.equal(await page.locator('.tt-sponsor-segments').isVisible(),false);

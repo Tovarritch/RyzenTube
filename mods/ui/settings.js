@@ -311,8 +311,15 @@ export default function modernUI(update, parameters) {
                         }
                     ]
                 },
+                ...[
+                    ['Player Settings Menu Entries', 'visibility'], ['Sort Player Settings', 'order']
+                ].map(([name, action]) => ({ name, icon: 'SETTINGS', value: null,
+                    action: { customAction: { action: 'TT_MENU_PREFERENCES', parameters: { action, menu: 'player' } } } })),
                 {
                     name: 'Press Back twice to leave the player', value: 'enableDoubleBackExit', icon: 'ARROW_BACK',
+                },
+                {
+                    name: 'Back shows the player controls', value: 'enableBackRevealsControls', icon: 'ARROW_BACK',
                 },
                 {
                     name: 'Instant Seek', value: null, menuId: 'tt-instant-seek',
@@ -782,6 +789,12 @@ export default function modernUI(update, parameters) {
                 {
                     name: t('settings.options.uiSettings.options.hideMembersOnlyVideos'),
                     value: 'hideMembersOnlyVideos',
+                    icon: 'VISIBILITY_OFF',
+                },
+                {
+                    name: 'Hide Duplicate Videos',
+                    subtitle: 'Keeps a video’s first appearance on a page. Not applied on the watch page or in playlists.',
+                    value: 'hideDuplicateVideos',
                     icon: 'VISIBILITY_OFF',
                 },
                 {

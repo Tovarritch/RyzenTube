@@ -8,7 +8,7 @@ import { t } from 'i18next';
 import { requestNextAndNavigateChannel, getFeedbackPanelTokens, sendFeedbackToken } from './utils/innerTubeCalls.js';
 import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
-import { showMenuPreferences } from './ui/longPressPreferences.js';
+import { showMenuPreferences, arrangePlayerMenu } from './ui/longPressPreferences.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 
 export default function resolveCommand(cmd, _) {
@@ -154,6 +154,9 @@ export function patchResolveCommand() {
                             ])
                         );
                     }
+
+                    const list = cmd.openPopupAction.popup.overlaySectionRenderer.overlay.overlayTwoPanelRenderer.actionPanel.overlayPanelRenderer.content.overlayPanelItemListRenderer;
+                    list.items = arrangePlayerMenu(list.items);
                 } else if (cmd?.watchEndpoint?.videoId) {
                     window.isPipPlaying = false;
                     const ytlrPlayerContainer = document.querySelector('ytlr-player-container');

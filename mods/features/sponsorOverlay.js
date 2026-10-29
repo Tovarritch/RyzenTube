@@ -1,48 +1,69 @@
-export function showSponsorSegments(video, slider) {
-  if (!video || video.ended || !slider?.isConnected || !slider.getClientRects().length) return false;
+// SponsorBlock segments on the player's seek bar.
+//
+// This follows the original TizenTube overlay, which is known to render on
+// Cobalt: a transparent bar styled like the seek bar slider, appended to the
+// progress bar container and shown or hidden with the seek bar itself. The only
+// addition is hiding it once the video has ended (Up Next screen).
+
+export function showSponsorSegments(video, progressBar) {
+  if (!video || video.ended) return false;
   if (Number.isFinite(video.duration) && video.currentTime >= video.duration - 0.1) return false;
-  for (let node = slider; node && node !== document.body; node = node.parentElement) {
-    const style = getComputedStyle(node);
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0' || node.hidden) return false;
-  }
-  return true;
+  return !progressBar || progressBar.getAttribute('hybridnavfocusable') !== 'false';
 }
 
 export function createSponsorOverlay(video, segments, colors) {
+  const duration = video.duration;
   const overlay = document.createElement('div');
-  overlay.className = 'tt-sponsor-segments';
+  overlay.classList.add('tt-sponsor-segments', 'ytLrProgressBarSlider', 'ytLrProgressBarSliderRectangularProgressBar');
   overlay.setAttribute('aria-hidden', 'true');
-  overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;display:none';
+  overlay.style.setProperty('z-index', '10', 'important');
+  overlay.style.setProperty('background-color', 'rgba(0, 0, 0, 0)', 'important');
+  overlay.style.setProperty('width', '72rem', 'important');
+  overlay.style.setProperty('left', '4rem', 'important');
+  overlay.style.setProperty('pointer-events', 'none', 'important');
+  overlay.style.setProperty('display', 'none', 'important');
+
   for (const item of segments || []) {
-    const bar = document.createElement('div');
     const [start, end] = item.segment;
-    const style = colors[item.category] || { color: 'blue', opacity: .7 };
-    const duration = video.duration;
-    bar.style.cssText = `position:absolute;top:0;height:100%;background:${style.color};opacity:${style.opacity};left:${100 * start / duration}%;width:${item.category === 'poi_highlight' ? 1 : 100 * (end - start) / duration}%`;
+    const style = colors[item.category] || { color: 'blue', opacity: 0.7 };
+    const left = duration ? (100 * start) / duration : 0;
+    const width = duration ? (100 * (end - start)) / duration : 0;
+    const bar = document.createElement('div');
+    bar.style.setProperty('background-color', style.color, 'important');
+    bar.style.setProperty('opacity', String(style.opacity), 'important');
+    bar.style.setProperty('height', '100%', 'important');
+    bar.style.setProperty('width', `${item.category === 'poi_highlight' ? 1 : width}%`, 'important');
+    bar.style.setProperty('left', `${left}%`, 'important');
+    bar.style.setProperty('position', 'absolute', 'important');
     overlay.appendChild(bar);
   }
-  let lastSlider = null, originalPosition = null;
+
+  let styled = false;
   function update() {
-    const slider = document.querySelector('ytlr-progress-bar div[idomkey="slider"]');
-    if (slider && overlay.parentElement !== slider) {
-      if (lastSlider && originalPosition !== null) lastSlider.style.position = originalPosition;
-      originalPosition = slider.style.position;
-      if (getComputedStyle(slider).position === 'static') slider.style.position = 'relative';
-      lastSlider = slider;
-      // Inherit the real seek bar's visibility and geometry, including Up Next.
-      slider.appendChild(overlay);
+    const slider = document.querySelector('div[idomkey="slider"]');
+    if (slider && !styled) {
+      styled = true;
+      // Newer seek bars use different slider classes; copy them and the size.
+      if (!slider.classList.contains('ytLrProgressBarSlider')) {
+        for (let i = 0; i < slider.classList.length; i++) overlay.classList.add(slider.classList[i]);
+        const rect = slider.getBoundingClientRect();
+        overlay.style.setProperty('height', `${rect.height}px`, 'important');
+        overlay.style.setProperty('bottom', `${rect.bottom - rect.top}px`, 'important');
+      }
     }
-    const display = showSponsorSegments(video, slider) ? 'block' : 'none';
-    if (overlay.style.display !== display) overlay.style.display = display;
+    const container = document.querySelector('ytlr-redux-connect-ytlr-progress-bar');
+    if (container && overlay.parentElement !== container) container.appendChild(overlay);
+    const display = showSponsorSegments(video, document.querySelector('ytlr-progress-bar')) ? 'block' : 'none';
+    if (overlay.style.getPropertyValue('display') !== display) overlay.style.setProperty('display', display, 'important');
   }
+
   const timer = setInterval(update, 250);
-  const events = ['ended', 'emptied', 'play', 'pause', 'timeupdate'];
+  const events = ['ended', 'emptied', 'play', 'pause', 'timeupdate', 'seeked'];
   events.forEach(event => video.addEventListener(event, update));
   update();
   return () => {
     clearInterval(timer);
     events.forEach(event => video.removeEventListener(event, update));
     overlay.remove();
-    if (lastSlider && originalPosition !== null) lastSlider.style.position = originalPosition;
   };
 }
