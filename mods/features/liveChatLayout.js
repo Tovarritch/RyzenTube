@@ -25,19 +25,39 @@ export function liveChatCss(position, scale, shiftPx) {
 ${hidden}`;
 }
 
-let styledChat = null;
-function applyStyle() {
+// YouTube's content security policy rejects <style> elements without its
+// nonce, so (like ui.js) the rules go into YouTube's own nonce'd style element,
+// between markers that are replaced on every change.
+const START = `/* ${STYLE_ID} */`;
+const END = `/* /${STYLE_ID} */`;
+export function withSection(text, css) {
+  const start = text.indexOf(START);
+  const end = text.indexOf(END);
+  const rest = start >= 0 && end > start ? text.slice(0, start) + text.slice(end + END.length) : text;
+  return `${rest}\n${START}\n${css}\n${END}`;
+}
+function writeCss(css) {
+  const owned = document.querySelector('style[nonce]');
+  if (owned) {
+    owned.textContent = withSection(owned.textContent, css);
+    return;
+  }
   let style = document.getElementById(STYLE_ID);
   if (!style) {
     style = document.createElement('style');
     style.id = STYLE_ID;
-    document.head.appendChild(style);
+    (document.head || document.documentElement).appendChild(style);
   }
+  style.textContent = css;
+}
+
+let styledChat = null;
+function applyStyle() {
   // offsetWidth ignores transforms, so this stays right once the box has moved.
   const chat = document.querySelector('ytlr-live-chat');
   styledChat = chat;
   const shift = chat && chat.offsetWidth ? chat.offsetWidth - window.innerWidth : NaN;
-  style.textContent = liveChatCss(configRead('liveChatPosition'), Number(configRead('liveChatScale')) || 1, shift);
+  writeCss(liveChatCss(configRead('liveChatPosition'), Number(configRead('liveChatScale')) || 1, shift));
 }
 
 const offsetOf = element => {
@@ -73,7 +93,7 @@ function schedule() {
   requestAnimationFrame(() => { scheduled = false; limitMessages(); });
 }
 
-if (typeof document !== 'undefined' && document.head) {
+if (typeof document !== 'undefined' && document.body) {
   applyStyle();
   configChangeEmitter.addEventListener('configChange', event => {
     if (/^liveChat/.test(event.detail.key)) { applyStyle(); schedule(); }
@@ -90,7 +110,7 @@ if (typeof document !== 'undefined' && document.head) {
     chatObserver.disconnect();
     watched = chat;
     if (chat) {
-      chatObserver.observe(chat, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+      chatObserver.observe(chat, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
       schedule();
     }
   };

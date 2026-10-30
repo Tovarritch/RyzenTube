@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 globalThis.window = { localStorage: {}, location: { hash: '#/' }, dispatchEvent() {} };
-const { liveChatCss, messagesToHide } = await import('../features/liveChatLayout.js');
+const { liveChatCss, messagesToHide, withSection } = await import('../features/liveChatLayout.js');
 
 const message = translate => ({ getAttribute: () => `transform: translateY(${translate}rem) translateZ(0px);` });
 
@@ -20,4 +20,13 @@ test('only the newest messages, lowest on screen, stay visible', () => {
     const [newest, middle, oldest, older] = [message(-2), message(-10.5), message(-26.625), message(-18)];
     assert.deepEqual(messagesToHide([oldest, newest, older, middle], 2), [older, oldest]);
     assert.deepEqual(messagesToHide([oldest, newest], 0), [], 'No limit hides nothing');
+});
+
+test("rules live in YouTube's own style block and replace their earlier version", () => {
+    const once = withSection('.yt { color: red }', 'ytlr-live-chat { a: 1 }');
+    const twice = withSection(once, 'ytlr-live-chat { a: 2 }');
+    assert.match(twice, /^\.yt \{ color: red \}/);
+    assert.equal((twice.match(/\/\* tt-live-chat-style \*\//g) || []).length, 1, 'one section');
+    assert.match(twice, /a: 2/);
+    assert.doesNotMatch(twice, /a: 1/);
 });
