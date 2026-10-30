@@ -10,15 +10,17 @@ const STYLE_ID = 'tt-live-chat-style';
 export const LIVE_CHAT_SIZES = [['Small', 0.8], ['Medium', 1], ['Large', 1.25], ['Extra large', 1.5]];
 export const LIVE_CHAT_MESSAGE_LIMITS = [0, 3, 5, 8, 12];
 
+// The box sits flush with the right edge and does not follow left/right, so
+// it is moved with a transform: its own width minus the screen width puts it
+// flush with the left edge. Scaling grows it from its bottom outer corner.
 export function liveChatCss(position, scale) {
   const left = position === 'left';
-  const rules = [];
-  if (left) rules.push('left: 0 !important;', 'right: auto !important;');
-  if (scale && scale !== 1) {
-    rules.push(`transform: scale(${scale}) !important;`, `transform-origin: ${left ? 'left' : 'right'} bottom !important;`);
-  }
-  return rules.length ? `ytlr-live-chat { ${rules.join(' ')} }\n.tt-chat-hidden { visibility: hidden !important; }`
-    : '.tt-chat-hidden { visibility: hidden !important; }';
+  const parts = [];
+  if (left) parts.push('translateX(calc(100% - 100vw))');
+  if (scale && scale !== 1) parts.push(`scale(${scale})`);
+  const hidden = '.tt-chat-hidden { visibility: hidden !important; }';
+  if (!parts.length) return hidden;
+  return `ytlr-live-chat { transform: ${parts.join(' ')} !important; transform-origin: ${left ? 'left' : 'right'} bottom !important; }\n${hidden}`;
 }
 
 function applyStyle() {

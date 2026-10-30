@@ -335,11 +335,11 @@ export default function modernUI(update, parameters) {
                     name: 'Live chat', value: null, menuId: 'tt-live-chat', icon: 'COMMENT',
                     menuHeader: { title: 'Live chat', subtitle: 'Where live chat appears over a stream, how big it is, and how many messages it shows.' },
                     options: [
-                        { name: 'Position', value: null, menuId: 'tt-live-chat-position',
+                        { name: 'Position', value: null, menuId: 'tt-live-chat-position', menuHeader: { title: 'Live chat position' },
                           options: [['Right side', 'right'], ['Left side', 'left']].map(([name, value]) => ({ name, key: 'liveChatPosition', value })) },
-                        { name: 'Size', value: null, menuId: 'tt-live-chat-size',
+                        { name: 'Size', value: null, menuId: 'tt-live-chat-size', menuHeader: { title: 'Live chat size' },
                           options: LIVE_CHAT_SIZES.map(([name, value]) => ({ name, key: 'liveChatScale', value })) },
-                        { name: 'Messages on screen', value: null, menuId: 'tt-live-chat-messages',
+                        { name: 'Messages on screen', value: null, menuId: 'tt-live-chat-messages', menuHeader: { title: 'Live chat messages on screen', subtitle: 'The newest messages are kept.' },
                           options: LIVE_CHAT_MESSAGE_LIMITS.map(value => ({ name: value ? `${value} messages` : 'All (YouTube default)', key: 'liveChatMaxMessages', value })) },
                     ]
                 },
