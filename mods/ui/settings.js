@@ -5,6 +5,7 @@ import { showModal, buttonItem, overlayPanelItemListRenderer, scrollPaneRenderer
 import { t } from 'i18next';
 import resolveCommand from '../resolveCommand.js';
 import { LIBRARY_TABS } from '../features/libraryTabHider.js';
+import { LIVE_CHAT_SIZES, LIVE_CHAT_MESSAGE_LIMITS } from '../features/liveChatLayout.js';
 
 export default function modernUI(update, parameters) {
     const settings = [
@@ -328,6 +329,18 @@ export default function modernUI(update, parameters) {
                         { name: 'Enable Instant Seek', value: 'enableInstantSeek' },
                         { name: 'Seek commit delay', value: null, menuId: 'tt-instant-seek-delay',
                           options: [250, 500, 750, 1000, 1250, 1500].map(value => ({ name: `${value} ms`, key: 'instantSeekDelayMs', value })) },
+                    ]
+                },
+                {
+                    name: 'Live chat', value: null, menuId: 'tt-live-chat', icon: 'COMMENT',
+                    menuHeader: { title: 'Live chat', subtitle: 'Where live chat appears over a stream, how big it is, and how many messages it shows.' },
+                    options: [
+                        { name: 'Position', value: null, menuId: 'tt-live-chat-position',
+                          options: [['Right side', 'right'], ['Left side', 'left']].map(([name, value]) => ({ name, key: 'liveChatPosition', value })) },
+                        { name: 'Size', value: null, menuId: 'tt-live-chat-size',
+                          options: LIVE_CHAT_SIZES.map(([name, value]) => ({ name, key: 'liveChatScale', value })) },
+                        { name: 'Messages on screen', value: null, menuId: 'tt-live-chat-messages',
+                          options: LIVE_CHAT_MESSAGE_LIMITS.map(value => ({ name: value ? `${value} messages` : 'All (YouTube default)', key: 'liveChatMaxMessages', value })) },
                     ]
                 },
                 {
