@@ -20,11 +20,13 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 PORT = 18946
+DEBUG_BUNDLE = Path(__file__).resolve().parents[1] / 'dbgs' / 'userScript.js'
 TV = os.environ.get('TT_TV', '192.168.178.143:5555')
 
 
@@ -58,32 +60,67 @@ def request(method: str, path: str, secret: str, body: bytes = None, timeout: in
         return json.loads(response.read().decode('utf-8'))
 
 
+_secret = None
+
+
+def run(code: str, timeout: int = 75):
+    """Run statements on the TV and return the value; exits on errors."""
+    global _secret
+    _secret = _secret or token()
+    try:
+        command = request('POST', '/cmd', _secret, code.encode('utf-8'))
+        result = request('GET', f"/wait?id={command['id']}", _secret, timeout=timeout)
+    except urllib.error.HTTPError as error:
+        sys.exit(f'HTTP {error.code}: {error.read().decode("utf-8", "replace")}')
+    except urllib.error.URLError as error:
+        sys.exit(f'Console not reachable ({error.reason}). Is the debug APK running?')
+    if not result.get('ok'):
+        sys.exit(f"Error on the TV:\n{result.get('error')}")
+    return result.get('value')
+
+
+def wait_for_page(secret_needed: bool = True, seconds: int = 60) -> None:
+    """After a reload: wait until the new page's console answers."""
+    deadline = time.time() + seconds
+    time.sleep(3)
+    while time.time() < deadline:
+        try:
+            command = request('POST', '/cmd', _secret, b'return window.tizenTubeBuild')
+            result = request('GET', f"/wait?id={command['id']}", _secret, timeout=10)
+            if result.get('ok') and result.get('value'):
+                return
+        except (urllib.error.URLError, OSError):
+            pass
+        time.sleep(2)
+    sys.exit('The TV did not come back within a minute.')
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('code', nargs='?')
     parser.add_argument('-s', '--statements', action='store_true', help='code is statements; use return')
     parser.add_argument('-f', '--file', type=Path, help='run statements from a file')
+    parser.add_argument('--load', nargs='?', const=DEBUG_BUNDLE, type=Path, metavar='BUNDLE',
+                        help='run a test build (default dbgs/userScript.js) on the TV until --unload; no GitHub push')
+    parser.add_argument('--unload', action='store_true', help='go back to the build the APK loads')
     args = parser.parse_args()
+    if args.load or args.unload:
+        # Stored in localStorage and picked up by dev/override.js after a reload.
+        store = (f'localStorage.setItem("tt-dev-bundle", {json.dumps(args.load.read_text(encoding="utf-8"))});'
+                 if args.load else 'localStorage.removeItem("tt-dev-bundle");')
+        code = store + ' setTimeout(() => location.reload(), 200); return "reloading";'
+        run(code)
+        wait_for_page(secret_needed=True)
+        print(run('return window.tizenTubeBuild + (window.__ttDevOverride ? " (test build from adb)" : " (from the APK)")'))
+        return
     if args.file:
         code = args.file.read_text(encoding='utf-8')
     elif args.code:
         code = args.code if args.statements else f'return ({args.code});'
     else:
         parser.error('give code or -f')
-    secret = token()
-    try:
-        command = request('POST', '/cmd', secret, code.encode('utf-8'))
-        result = request('GET', f"/wait?id={command['id']}", secret)
-    except urllib.error.HTTPError as error:
-        sys.exit(f'HTTP {error.code}: {error.read().decode("utf-8", "replace")}')
-    except urllib.error.URLError as error:
-        sys.exit(f'Console not reachable ({error.reason}). Is the debug APK running?')
-    if result.get('ok'):
-        value = result.get('value')
-        print(value if isinstance(value, str) else json.dumps(value, indent=2, ensure_ascii=False))
-    else:
-        sys.exit(f"Error on the TV:\n{result.get('error')}")
-
+    value = run(code)
+    print(value if isinstance(value, str) else json.dumps(value, indent=2, ensure_ascii=False))
 
 if __name__ == '__main__':
     main()
