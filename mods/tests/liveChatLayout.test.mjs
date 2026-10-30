@@ -8,11 +8,12 @@ const message = translate => ({ getAttribute: () => `transform: translateY(${tra
 
 test('chat moves to the left and scales from its bottom corner', () => {
     assert.doesNotMatch(liveChatCss('right', 1), /ytlr-live-chat \{/, 'YouTube default: no override');
-    const left = liveChatCss('left', 1.25);
-    assert.match(left, /translateX\(calc\(100% - 100vw\)\) scale\(1\.25\)/);
+    const left = liveChatCss('left', 1.25, -1395);
+    assert.match(left, /translateX\(-1395px\) scale\(1\.25\)/);
     assert.match(left, /scale\(1\.25\)/);
     assert.match(left, /transform-origin: left bottom/);
     assert.match(liveChatCss('right', 0.8), /transform-origin: right bottom/);
+    assert.doesNotMatch(liveChatCss('left', 1, NaN), /translateX/, 'Not measured yet: stays put');
 });
 
 test('only the newest messages, lowest on screen, stay visible', () => {

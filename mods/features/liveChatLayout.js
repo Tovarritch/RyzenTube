@@ -10,19 +10,22 @@ const STYLE_ID = 'tt-live-chat-style';
 export const LIVE_CHAT_SIZES = [['Small', 0.8], ['Medium', 1], ['Large', 1.25], ['Extra large', 1.5]];
 export const LIVE_CHAT_MESSAGE_LIMITS = [0, 3, 5, 8, 12];
 
-// The box sits flush with the right edge and does not follow left/right, so
-// it is moved with a transform: its own width minus the screen width puts it
-// flush with the left edge. Scaling grows it from its bottom outer corner.
-export function liveChatCss(position, scale) {
-  const left = position === 'left';
+// The box sits flush with the right edge and does not follow left/right. Cobalt
+// drops a transform that mixes calc(), % and vw, so the shift to the left edge
+// is measured in pixels: the box's width minus the screen width. Scaling grows
+// the box from its bottom outer corner.
+export function liveChatCss(position, scale, shiftPx) {
+  const left = position === 'left' && Number.isFinite(shiftPx);
   const parts = [];
-  if (left) parts.push('translateX(calc(100% - 100vw))');
+  if (left) parts.push(`translateX(${Math.round(shiftPx)}px)`);
   if (scale && scale !== 1) parts.push(`scale(${scale})`);
   const hidden = '.tt-chat-hidden { visibility: hidden !important; }';
   if (!parts.length) return hidden;
-  return `ytlr-live-chat { transform: ${parts.join(' ')} !important; transform-origin: ${left ? 'left' : 'right'} bottom !important; }\n${hidden}`;
+  return `ytlr-live-chat { transform: ${parts.join(' ')} !important; transform-origin: ${left ? 'left' : 'right'} bottom !important; }
+${hidden}`;
 }
 
+let styledChat = null;
 function applyStyle() {
   let style = document.getElementById(STYLE_ID);
   if (!style) {
@@ -30,7 +33,11 @@ function applyStyle() {
     style.id = STYLE_ID;
     document.head.appendChild(style);
   }
-  style.textContent = liveChatCss(configRead('liveChatPosition'), Number(configRead('liveChatScale')) || 1);
+  // offsetWidth ignores transforms, so this stays right once the box has moved.
+  const chat = document.querySelector('ytlr-live-chat');
+  styledChat = chat;
+  const shift = chat && chat.offsetWidth ? chat.offsetWidth - window.innerWidth : NaN;
+  style.textContent = liveChatCss(configRead('liveChatPosition'), Number(configRead('liveChatScale')) || 1, shift);
 }
 
 const offsetOf = element => {
@@ -76,6 +83,8 @@ if (typeof document !== 'undefined' && document.head) {
   let watched = null;
   const chatObserver = new MutationObserver(schedule);
   const watchChat = () => {
+    // A new chat box (another stream) needs its own measurement.
+    if (document.querySelector('ytlr-live-chat') !== styledChat) applyStyle();
     const chat = Number(configRead('liveChatMaxMessages')) ? document.querySelector('ytlr-live-chat') : null;
     if (chat === watched) return;
     chatObserver.disconnect();
