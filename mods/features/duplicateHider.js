@@ -54,7 +54,9 @@ function dedupeShelves(shelves) {
     if (list && Array.isArray(list.items)) {
       const hadItems = list.items.length > 0;
       list.items = dedupeItems(list.items);
-      return !hadItems || list.items.length > 0;
+      // Marked rows are refilled from the rows below, then dropped if still
+      // empty (rowReflow.js); dropping a grid's titled first row loses its title.
+      return !hadItems || list.items.length > 0 || list.ttRowSize !== undefined;
     }
     const grid = shelf?.shelfRenderer?.content?.gridRenderer || shelf?.gridRenderer;
     if (grid && Array.isArray(grid.items)) {

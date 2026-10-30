@@ -14,6 +14,7 @@ import { patchPlayerButtons } from './playerButtonPreferences.js';
 import { patchOriginalMetadata } from './originalLanguage.js';
 import { tagMenuItem, arrangeMenu } from '../ui/longPressPreferences.js';
 import { hideDuplicateVideos } from './duplicateHider.js';
+import { markRows, reflowRows, hideRelevantRow } from './rowReflow.js';
 import { patchCommentPanel } from './commentSort.js';
 
 /**
@@ -29,6 +30,8 @@ const origParse = JSON.parse;
 JSON.parse = function () {
   const r = origParse.apply(this, arguments);
   try {
+    markRows(r);
+    hideRelevantRow(r, configRead('hideSubscriptionsRelevantRow'));
     filterLibraryTabs(r);
     patchPlayerButtons(r);
     patchOriginalMetadata(r);
@@ -340,6 +343,8 @@ JSON.parse = function () {
 
     // Runs last, once hidden and blocked videos are already gone.
     hideDuplicateVideos(r);
+    // Refill grid rows left short by any of the filters above.
+    reflowRows(r);
   } catch (e) {
     console.error('An error occured while processing the JSON:', e);
   }

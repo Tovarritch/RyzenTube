@@ -798,6 +798,11 @@ export default function modernUI(update, parameters) {
                     icon: 'VISIBILITY_OFF',
                 },
                 {
+                    name: 'Hide "Most relevant" in Subscriptions',
+                    value: 'hideSubscriptionsRelevantRow',
+                    icon: 'VISIBILITY_OFF',
+                },
+                {
                     name: t('settings.options.uiSettings.options.returnYoutubeDislike'),
                     value: 'enableReturnYoutubeDislike',
                     icon: 'STAR',
