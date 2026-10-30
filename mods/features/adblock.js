@@ -15,6 +15,7 @@ import { patchOriginalMetadata } from './originalLanguage.js';
 import { tagMenuItem, arrangeMenu } from '../ui/longPressPreferences.js';
 import { hideDuplicateVideos } from './duplicateHider.js';
 import { markRows, reflowRows, hideRelevantRow } from './rowReflow.js';
+import { hideHomeMixes } from './mixHider.js';
 import { patchCommentPanel } from './commentSort.js';
 
 /**
@@ -32,6 +33,7 @@ JSON.parse = function () {
   try {
     markRows(r);
     hideRelevantRow(r, configRead('hideSubscriptionsRelevantRow'));
+    hideHomeMixes(r, configRead('hideHomeMixes'));
     filterLibraryTabs(r);
     patchPlayerButtons(r);
     patchOriginalMetadata(r);

@@ -228,12 +228,7 @@ function execute_once_dom_loaded() {
     }, 2000);
   }
 
-  let explicitHomeRefresh = false;
-  try {
-    explicitHomeRefresh = window.sessionStorage.getItem('tt-explicit-home-refresh') === '1';
-    window.sessionStorage.removeItem('tt-explicit-home-refresh');
-  } catch (_) {}
-  if (!explicitHomeRefresh && configRead('reloadHomeOnStartup')) {
+  if (configRead('reloadHomeOnStartup')) {
     if (configRead('launchToOnStartup')) {
       resolveCommand(JSON.parse(configRead('launchToOnStartup')));
     } else {

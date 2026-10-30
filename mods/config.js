@@ -61,6 +61,7 @@ const defaultConfig = {
   hideWatchedVideosPages: [],
   hideDuplicateVideos: false,
   hideSubscriptionsRelevantRow: true,
+  hideHomeMixes: true,
   commentSortOrder: '',
   enableHideEndScreenCards: false,
   enableYouThereRenderer: true,

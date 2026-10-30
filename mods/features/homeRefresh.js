@@ -1,4 +1,5 @@
 import { isOkActivationEvent } from '../utils/okKey.js';
+import resolveCommand from '../resolveCommand.js';
 const GUIDE_ENTRY = 'ytlr-guide-entry-renderer, ytlr-guide-entry';
 let consuming = false;
 function focusedHome(event) {
@@ -19,12 +20,11 @@ function handleHomeKey(event) {
     consuming = true;
     event.preventDefault();
     event.stopImmediatePropagation();
-    try { window.sessionStorage.setItem('tt-explicit-home-refresh', '1'); } catch (_) {}
-    // Let the key dispatch finish before reloading. A same-document hash
-    // navigation followed immediately by reload can cancel the reload in Cobalt.
+    // Reload only the Home feed, as the startup refresh does, not the whole app.
+    // Let the key dispatch finish first; elsewhere, go to Home before reloading.
     const navigate = window.location.hash !== '#/';
     if (navigate) window.location.hash = '#/';
-    setTimeout(() => window.location.reload(), navigate ? 250 : 50);
+    setTimeout(() => resolveCommand({ signalAction: { signal: 'SOFT_RELOAD_PAGE' } }), navigate ? 400 : 50);
   }
   if (!consuming) return;
   event.preventDefault();

@@ -803,6 +803,11 @@ export default function modernUI(update, parameters) {
                     icon: 'VISIBILITY_OFF',
                 },
                 {
+                    name: 'Hide Mixes on Home',
+                    value: 'hideHomeMixes',
+                    icon: 'VISIBILITY_OFF',
+                },
+                {
                     name: t('settings.options.uiSettings.options.returnYoutubeDislike'),
                     value: 'enableReturnYoutubeDislike',
                     icon: 'STAR',

@@ -33,6 +33,7 @@ import "./ui/customUI.js";
 import "./ui/customGuideAction.js";
 import "./features/autoFrameRate.js";
 import "./ui/clock.js";
+import "./features/chatProbe.js";
 
 // This is set only after every imported feature has initialized successfully.
 window.tizenTubeBuild = BUILD_LABEL;
