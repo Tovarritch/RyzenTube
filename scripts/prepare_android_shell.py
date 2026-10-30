@@ -2,7 +2,9 @@
 """Add the loopback RYD bridge to the official ARM shell before release repacking.
 
 Requires a JDK, Apktool, Android SDK build-tools and an Android platform jar.
-This does not add debugging hooks or change the package ID/signing identity.
+This does not add debugging hooks or change the package ID/signing identity,
+except with --debug-console, which builds a debug-only shell (never released)
+that also starts the adb development console (android/DevConsole.java).
 """
 import argparse
 import os
@@ -16,6 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     for name in ('source', 'output', 'work_dir', 'jdk', 'apktool', 'build_tools', 'android_jar'):
         parser.add_argument('--' + name.replace('_', '-'), type=Path, required=True)
+    parser.add_argument('--debug-console', action='store_true')
     args = parser.parse_args()
     with zipfile.ZipFile(args.source) as apk:
         abis = {p.split('/')[1] for p in apk.namelist() if p.startswith('lib/') and p.endswith('.so')}
@@ -37,14 +40,17 @@ def main():
     original = '    invoke-direct {p0}, Ldev/cobalt/coat/CobaltActivity;-><init>()V'
     if source.count(original) != 1:
         raise ValueError('Unrecognized MainActivity constructor')
-    activity.write_text(source.replace(original, original +
-        '\n\n    invoke-static {}, Lapp/tizentube/DislikeService;->start()V'), encoding='utf-8')
+    starts = '\n\n    invoke-static {}, Lapp/tizentube/DislikeService;->start()V'
+    if args.debug_console:
+        starts += '\n\n    invoke-static {}, Lapp/tizentube/DevConsole;->start()V'
+    activity.write_text(source.replace(original, original + starts), encoding='utf-8')
     classes = args.work_dir / 'classes'
     dex = args.work_dir / 'dex'
     classes.mkdir()
     dex.mkdir()
     bridge = Path(__file__).resolve().parents[1] / 'android' / 'DislikeService.java'
-    run(javac, '--release', '8', '-d', classes, bridge)
+    sources = [bridge] + ([bridge.with_name('DevConsole.java')] if args.debug_console else [])
+    run(javac, '--release', '8', '-d', classes, *sources)
     # Calling D8's jar avoids shell/batch quoting differences on Windows.
     run(java, '-cp', args.build_tools / 'lib' / 'd8.jar', 'com.android.tools.r8.D8',
         '--min-api', '21', '--lib', args.android_jar, '--output', dex, *classes.rglob('*.class'))

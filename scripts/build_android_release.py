@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 UPSTREAM_URL = b"https://cdn.jsdelivr.net/npm/@foxreis/tizentube/dist/userScript.js?v="
-USERSCRIPT_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/TizenTube@r32/dist/userScript.js?ve="
+USERSCRIPT_URL = b"//cdn.jsdelivr.net/gh/Tovarritch/TizenTube@r33/dist/userScript.js?ve="
 
 
 def is_signature_file(name: str) -> bool:
@@ -41,8 +41,14 @@ def copy_info(source: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return target
 
 
-def patch_apk(source_path: Path, output_path: Path) -> None:
-    if len(UPSTREAM_URL) != len(USERSCRIPT_URL):
+def debug_url(url: bytes) -> bytes:
+    """The debug bundle (dbgs/userScript.js) at the same tag, same byte length."""
+    return url.replace(b"/dist/userScript.js", b"/dbgs/userScript.js")
+
+
+def patch_apk(source_path: Path, output_path: Path, debug: bool = False) -> None:
+    url = debug_url(USERSCRIPT_URL) if debug else USERSCRIPT_URL
+    if len(UPSTREAM_URL) != len(url):
         raise RuntimeError("Replacement URL must be the same byte length as the upstream URL")
 
     patched_libraries = 0
@@ -56,9 +62,12 @@ def patch_apk(source_path: Path, output_path: Path) -> None:
         }
         if abis != {'armeabi-v7a'}:
             raise RuntimeError('Only 32-bit ARM (armeabi-v7a) Android TV APKs are supported')
-        if not any(b'returnyoutubedislikeapi.com' in source.read(entry)
-                   for entry in source.namelist() if entry.endswith('.dex')):
+        dex = [source.read(entry) for entry in source.namelist() if entry.endswith('.dex')]
+        if not any(b'returnyoutubedislikeapi.com' in data for data in dex):
             raise RuntimeError('Missing dislike bridge; run prepare_android_shell.py first')
+        # A debug shell must never become a release, and the reverse.
+        if any(b'Lapp/tizentube/DevConsole;' in data for data in dex) != debug:
+            raise RuntimeError('Releases need a shell without the development console; --debug needs one with it')
         output.comment = source.comment
         for source_info in source.infolist():
             if is_signature_file(source_info.filename):
@@ -73,7 +82,7 @@ def patch_apk(source_path: Path, output_path: Path) -> None:
                     raise RuntimeError(
                         f"Expected one userscript URL in {source_info.filename}, found {occurrences}"
                     )
-                data = data.replace(UPSTREAM_URL, USERSCRIPT_URL)
+                data = data.replace(UPSTREAM_URL, url)
                 patched_libraries += 1
 
             output.writestr(copy_info(source_info), data)
@@ -87,6 +96,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--debug", action="store_true",
+                        help="debug APK that loads dbgs/userScript.js (needs a --debug-console shell); never release it")
     return parser.parse_args()
 
 
@@ -95,7 +106,11 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.unlink(missing_ok=True)
-    patch_apk(args.source, temporary)
+    try:
+        patch_apk(args.source, temporary, args.debug)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
     shutil.move(temporary, args.output)
 
 

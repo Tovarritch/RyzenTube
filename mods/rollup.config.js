@@ -6,10 +6,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
 import json from '@rollup/plugin-json';
 
-export default {
-    input: "userScript.js",
-    output: { file: "../dist/userScript.js", format: "iife" },
-    plugins: [
+const plugins = () => [
         json(),
         string({
             include: "**/*.css",
@@ -37,5 +34,10 @@ export default {
         replace({
             '\uFFFF': '\u0000',
         })
-    ]
-};
+];
+
+export default [
+    { input: "userScript.js", output: { file: "../dist/userScript.js", format: "iife" }, plugins: plugins() },
+    // Debug APKs only: TizenTube plus the development console (dev/devConsole.js).
+    { input: "debugEntry.js", output: { file: "../dbgs/userScript.js", format: "iife" }, plugins: plugins() },
+];
