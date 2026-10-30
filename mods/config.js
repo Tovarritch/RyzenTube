@@ -65,6 +65,7 @@ const defaultConfig = {
   liveChatPosition: 'right',
   liveChatScale: 1,
   liveChatMaxMessages: 0,
+  volumeBoost: 1,
   commentSortOrder: '',
   enableHideEndScreenCards: false,
   enableYouThereRenderer: true,

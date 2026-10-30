@@ -40,17 +40,40 @@ def main():
     original = '    invoke-direct {p0}, Ldev/cobalt/coat/CobaltActivity;-><init>()V'
     if source.count(original) != 1:
         raise ValueError('Unrecognized MainActivity constructor')
-    starts = '\n\n    invoke-static {}, Lapp/tizentube/DislikeService;->start()V'
+    starts = ('\n\n    invoke-static {}, Lapp/tizentube/DislikeService;->start()V'
+              '\n\n    invoke-static {}, Lapp/tizentube/VolumeBoost;->start()V')
     if args.debug_console:
         starts += '\n\n    invoke-static {}, Lapp/tizentube/DevConsole;->start()V'
     activity.write_text(source.replace(original, original + starts), encoding='utf-8')
+    # Volume boost: scale the samples at the start of each AudioTrackBridge write
+    # (android/VolumeBoost.java), after the method's parameter annotation.
+    bridges = list(shell.glob('smali*/dev/cobalt/media/AudioTrackBridge.smali'))
+    if len(bridges) != 1:
+        raise ValueError('Expected one AudioTrackBridge')
+    track_source = bridges[0].read_text(encoding='utf-8')
+    hooks = {
+        '.method private write([FI)I': 'invoke-static {p1, p2}, Lapp/tizentube/VolumeBoost;->process([FI)V',
+        '.method private writeWithAvSync([BIJ)I': 'invoke-static {p0, p1, p2}, Lapp/tizentube/VolumeBoost;->process(Ljava/lang/Object;[BI)V',
+        '.method private writeWithPresentationTime([BIJ)I': 'invoke-static {p0, p1, p2}, Lapp/tizentube/VolumeBoost;->process(Ljava/lang/Object;[BI)V',
+    }
+    for header, call in hooks.items():
+        start = track_source.find(header)
+        annotation_end = track_source.find('    .end annotation\n', start)
+        next_method = track_source.find('.end method', start)
+        if start < 0 or track_source.count(header) != 1 or not start < annotation_end < next_method:
+            raise ValueError(f'Unrecognized AudioTrackBridge method: {header}')
+        cut = annotation_end + len('    .end annotation\n')
+        track_source = track_source[:cut] + f'\n    {call}\n' + track_source[cut:]
+    bridges[0].write_text(track_source, encoding='utf-8')
     classes = args.work_dir / 'classes'
     dex = args.work_dir / 'dex'
     classes.mkdir()
     dex.mkdir()
     bridge = Path(__file__).resolve().parents[1] / 'android' / 'DislikeService.java'
-    sources = [bridge] + ([bridge.with_name('DevConsole.java')] if args.debug_console else [])
-    run(javac, '--release', '8', '-d', classes, *sources)
+    sources = [bridge, bridge.with_name('VolumeBoost.java')]
+    if args.debug_console:
+        sources.append(bridge.with_name('DevConsole.java'))
+    run(javac, '--release', '8', '-classpath', args.android_jar, '-d', classes, *sources)
     # Calling D8's jar avoids shell/batch quoting differences on Windows.
     run(java, '-cp', args.build_tools / 'lib' / 'd8.jar', 'com.android.tools.r8.D8',
         '--min-api', '21', '--lib', args.android_jar, '--output', dex, *classes.rglob('*.class'))

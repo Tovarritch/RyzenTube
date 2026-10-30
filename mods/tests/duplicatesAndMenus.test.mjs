@@ -94,3 +94,11 @@ test('player settings entries are recognised, hidden and sorted', () => {
         ['Speed', 'Loop', 'Something new', 'Quality', 'Captions', 'Audio', 'Audio Track'],
         'Unknown entries keep their slot; the rest follow the chosen order');
 });
+
+test('entries added after sorting appear after the entry they follow by default', async () => {
+    const { menuOrder } = await import('../ui/menuOrder.js');
+    configWrite('playerMenuOrder', ['speed', 'quality', 'captions']);
+    const order = menuOrder('player');
+    assert.equal(order.indexOf('volumeBoost'), order.indexOf('speed') + 1);
+    assert.deepEqual(order.slice(0, 3), ['speed', 'volumeBoost', 'loop'], 'Each new entry follows its default neighbour');
+});

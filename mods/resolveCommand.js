@@ -8,8 +8,9 @@ import { t } from 'i18next';
 import { requestNextAndNavigateChannel, getFeedbackPanelTokens, sendFeedbackToken } from './utils/innerTubeCalls.js';
 import qrcode from 'qrcode-npm';
 import showGuideSettings from './ui/sidebarModification.js';
-import { showMenuPreferences, arrangePlayerMenu } from './ui/longPressPreferences.js';
+import { showMenuPreferences, arrangePlayerMenu, playerMenuId } from './ui/longPressPreferences.js';
 import { sortComments, openSortedComments } from './features/commentSort.js';
+import { showVolumeBoost, setVolumeBoost, boostLabel } from './features/volumeBoost.js';
 import { blockChannel, hideVideoLocally } from './utils/blocklist.js';
 
 export default function resolveCommand(cmd, _) {
@@ -157,6 +158,16 @@ export function patchResolveCommand() {
                     }
 
                     const list = cmd.openPopupAction.popup.overlaySectionRenderer.overlay.overlayTwoPanelRenderer.actionPanel.overlayPanelRenderer.content.overlayPanelItemListRenderer;
+                    // Volume boost, next to Speed. YouTube may reuse this menu's
+                    // data when it opens again, so drop the copy added last time:
+                    // its label still shows the old level.
+                    list.items = list.items.filter(item => playerMenuId(item) !== 'volumeBoost');
+                    const speedIndex = list.items.findIndex(item => ['SPEEDOMETER', 'SLOW_MOTION_VIDEO'].includes(item?.compactLinkRenderer?.icon?.iconType));
+                    list.items.splice(speedIndex >= 0 ? speedIndex + 1 : list.items.length, 0, buttonItem(
+                        { title: 'Volume boost', subtitle: boostLabel(Number(configRead('volumeBoost')) || 1) },
+                        { icon: 'VOLUME_UP', secondaryIcon: 'CHEVRON_RIGHT' },
+                        [{ customAction: { action: 'TT_VOLUME_BOOST_SHOW' } }]
+                    ));
                     list.items = arrangePlayerMenu(list.items);
                 } else if (openSortedComments(cmd)) {
                     return true;
@@ -205,6 +216,12 @@ export function patchResolveCommand() {
 
 function customAction(action, parameters) {
     switch (action) {
+        case 'TT_VOLUME_BOOST_SHOW':
+            showVolumeBoost();
+            break;
+        case 'TT_VOLUME_BOOST_SET':
+            setVolumeBoost(parameters);
+            break;
         case 'TT_COMMENTS_SORT':
             sortComments(parameters.mode);
             break;

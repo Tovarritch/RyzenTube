@@ -6,6 +6,7 @@ import { t } from 'i18next';
 import resolveCommand from '../resolveCommand.js';
 import { LIBRARY_TABS } from '../features/libraryTabHider.js';
 import { LIVE_CHAT_SIZES, LIVE_CHAT_MESSAGE_LIMITS } from '../features/liveChatLayout.js';
+import { VOLUME_BOOST_LEVELS, boostLabel } from '../features/volumeBoost.js';
 
 export default function modernUI(update, parameters) {
     const settings = [
@@ -330,6 +331,11 @@ export default function modernUI(update, parameters) {
                         { name: 'Seek commit delay', value: null, menuId: 'tt-instant-seek-delay',
                           options: [250, 500, 750, 1000, 1250, 1500].map(value => ({ name: `${value} ms`, key: 'instantSeekDelayMs', value })) },
                     ]
+                },
+                {
+                    name: 'Volume boost', value: null, menuId: 'tt-volume-boost-setting', icon: 'VOLUME_UP',
+                    menuHeader: { title: 'Volume boost', subtitle: 'Louder than 100%. Also in the player’s settings menu.' },
+                    options: VOLUME_BOOST_LEVELS.map(value => ({ name: value === 1 ? '100% (off)' : boostLabel(value), key: 'volumeBoost', value })),
                 },
                 {
                     name: 'Live chat', value: null, menuId: 'tt-live-chat', icon: 'COMMENT',

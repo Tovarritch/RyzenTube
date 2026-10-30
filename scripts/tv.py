@@ -44,12 +44,20 @@ def adb(*args: str) -> str:
     return subprocess.run([adb_path(), *args], capture_output=True, text=True, encoding='utf-8', errors='replace').stdout
 
 
-def token() -> str:
+TOKEN_CACHE = Path(os.environ.get('TEMP', '.')) / 'tizentube-tv-token'
+
+
+def token(fresh: bool = False) -> str:
+    """The console key: cached on the PC, read again from the TV log when needed
+    (the log rotates; the key changes only when the app restarts)."""
     adb('connect', TV)
     adb('-s', TV, 'forward', f'tcp:{PORT}', f'tcp:{PORT}')
+    if not fresh and TOKEN_CACHE.exists():
+        return TOKEN_CACHE.read_text().strip()
     found = re.findall(r'TTDEV token=([0-9a-z]+)', adb('-s', TV, 'logcat', '-d'))
     if not found:
-        sys.exit('No console token in the TV log. Is the debug APK installed and started?')
+        sys.exit('No console token in the TV log. Restart the debug app (the key is logged at start).')
+    TOKEN_CACHE.write_text(found[-1])
     return found[-1]
 
 
@@ -68,7 +76,13 @@ def run(code: str, timeout: int = 75):
     global _secret
     _secret = _secret or token()
     try:
-        command = request('POST', '/cmd', _secret, code.encode('utf-8'))
+        try:
+            command = request('POST', '/cmd', _secret, code.encode('utf-8'))
+        except urllib.error.HTTPError as error:
+            if error.code != 403:
+                raise
+            _secret = token(fresh=True)  # the app restarted: new key
+            command = request('POST', '/cmd', _secret, code.encode('utf-8'))
         result = request('GET', f"/wait?id={command['id']}", _secret, timeout=timeout)
     except urllib.error.HTTPError as error:
         sys.exit(f'HTTP {error.code}: {error.read().decode("utf-8", "replace")}')
