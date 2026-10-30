@@ -38,9 +38,12 @@ function serialize(value, depth = 0, seen = new WeakSet()) {
   return out;
 }
 
+// YouTube requires Trusted Types for scripts, so strings run through a policy.
+const policy = window.trustedTypes?.createPolicy?.('tizentube-dev-console', { createScript: source => source });
 async function run(code) {
   try {
-    const value = await new Function(`return (async () => {\n${code}\n})()`)();
+    const source = `(async () => {\n${code}\n})()`;
+    const value = await (0, eval)(policy ? policy.createScript(source) : source);
     return { ok: true, value: serialize(value) };
   } catch (error) {
     return { ok: false, error: String(error && error.stack || error) };
